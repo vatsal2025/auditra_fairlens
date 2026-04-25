@@ -83,8 +83,14 @@ def launch_automl_training(display_name: str, dataset, target_column: str) -> st
     )
 
     print(f"[train] Launched: {display_name}  target={target_column}")
-    print(f"        Resource: {job.resource_name}")
-    return job.resource_name
+    try:
+        resource = job.resource_name
+        print(f"        Resource: {resource}")
+        return resource
+    except Exception:
+        # resource_name unavailable immediately after sync=False — job is still running
+        print(f"        Job launched (resource name unavailable until job registers)")
+        return display_name
 
 
 def load_adult_train_only() -> "pd.DataFrame":
