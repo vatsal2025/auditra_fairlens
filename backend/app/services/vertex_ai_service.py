@@ -210,7 +210,7 @@ def predict_outcome_vertex(
     outcome_col: str,
     positive_outcome: str,
     sample_size: int = 500,
-) -> Optional[np.ndarray]:
+) -> Optional[tuple]:
     """
     Get binary outcome predictions from Vertex AI AutoML outcome-scorer endpoint.
     Returns array of 0/1 predictions aligned to a stratified sample of df.

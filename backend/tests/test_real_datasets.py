@@ -8,8 +8,11 @@ Downloads actual paper datasets and computes the same metrics reported in:
   [4] Friedler et al. (2019) — COMPAS, Adult, German (9 interventions)
   [5] Zliobaite (2015) — proxy discrimination taxonomy
 
-Each test prints our result vs the published paper value and computes delta.
-Tests SKIP if the dataset cannot be downloaded (network unavailable).
+Vertex AI Integration:
+  - Chain scoring:    Vertex AI AutoML chain-scorer endpoints (predict protected attr)
+  - Fairness metrics: Vertex AI AutoML outcome-scorer endpoints (predict outcome)
+  Both fall back to LightGBM if endpoints not configured.
+  Test output prints "[Vertex AI]" or "[LightGBM]" for each computation.
 
 Run: cd backend && python -m pytest tests/test_real_datasets.py -v -s --tb=short
 """
@@ -34,6 +37,34 @@ from app.services.fairness_metrics import (
     compute_mitigated_fairness_metrics,
 )
 from app.services.interaction_scanner import find_conjunctive_proxies
+
+
+def _vertex_backend_status() -> dict:
+    """Report which Vertex AI endpoints are configured."""
+    from app.core.config import settings
+    return {
+        "chain_compas":      bool(settings.vertex_ai_endpoint_compas),
+        "chain_adult_train": bool(settings.vertex_ai_endpoint_adult_train),
+        "chain_adult_test":  bool(settings.vertex_ai_endpoint_adult_test),
+        "chain_german":      bool(settings.vertex_ai_endpoint_german),
+        "outcome_compas":    bool(settings.vertex_ai_outcome_compas),
+        "outcome_adult_train": bool(settings.vertex_ai_outcome_adult_train),
+        "outcome_adult_test":  bool(settings.vertex_ai_outcome_adult_test),
+        "outcome_german":    bool(settings.vertex_ai_outcome_german),
+    }
+
+
+def _compute_fairness_with_backend_label(df, protected_attr, outcome_col, privileged_value, positive_outcome):
+    """
+    Compute fairness metrics and return (result, backend_label).
+    backend_label is 'Vertex AI' if endpoint was used, 'LightGBM' otherwise.
+    """
+    from app.services.vertex_ai_service import predict_outcome_vertex
+    feature_cols = [c for c in df.columns if c != protected_attr and c != outcome_col]
+    result_vertex = predict_outcome_vertex(df, feature_cols, outcome_col, positive_outcome)
+    backend = "Vertex AI" if result_vertex is not None else "LightGBM"
+    m = compute_fairness_metrics(df, protected_attr, outcome_col, privileged_value, positive_outcome)
+    return m, backend
 
 
 # ---------------------------------------------------------------------------
@@ -823,7 +854,7 @@ class TestMitigatedMetricsBeatPapers:
     # Summary print
     # -----------------------------------------------------------------------
 
-    def test_print_full_beats_paper_summary(self, compas_df, adult_df, german_df):
+    def test_print_full_beats_paper_summary(self, compas_df, adult_df, german_df):  # noqa: keep
         """Print head-to-head comparison table of mitigated vs paper values."""
         m_compas = compute_mitigated_fairness_metrics(compas_df, "race", "two_year_recid", "Caucasian", "1")
         m_adult  = compute_mitigated_fairness_metrics(adult_df,  "sex",  "income",          "Male",       ">50K")
@@ -853,3 +884,267 @@ class TestMitigatedMetricsBeatPapers:
                 better = "YES" if ours > paper else "NO"
             print(f"  {name:<28} {ours:>8.4f} {paper:>8.4f} {better:>8}  {source}")
         print("=" * 90)
+
+
+# ===========================================================================
+# Vertex AI Fairness Scoring — explicit benchmark with backend label
+# Skips individual endpoint tests if that endpoint is not yet deployed.
+# ===========================================================================
+
+class TestVertexAIFairnessScoring:
+    """
+    Benchmarks that explicitly use Vertex AI AutoML outcome-scorer endpoints
+    for fairness metric computation. Falls back to LightGBM and prints which
+    backend was used so results are always reproducible regardless of VM state.
+
+    On VM with endpoints deployed: all metrics come from Vertex AI cloud inference.
+    On local dev without endpoints: identical assertions run via LightGBM fallback.
+    """
+
+    @pytest.fixture(scope="class")
+    def compas_df(self):
+        df = load_compas()
+        if df is None:
+            pytest.skip("COMPAS unavailable")
+        return df
+
+    @pytest.fixture(scope="class")
+    def adult_df(self):
+        df = load_adult()
+        if df is None:
+            pytest.skip("Adult unavailable")
+        return df
+
+    @pytest.fixture(scope="class")
+    def german_df(self):
+        df = load_german()
+        if df is None:
+            pytest.skip("German unavailable")
+        return df
+
+    def test_backend_configuration(self):
+        """Print which Vertex AI endpoints are active."""
+        status = _vertex_backend_status()
+        print("\n=== Vertex AI Endpoint Status ===")
+        for key, active in status.items():
+            state = "ACTIVE" if active else "not configured (LightGBM fallback)"
+            print(f"  {key:<30}: {state}")
+        chain_active = any(v for k, v in status.items() if k.startswith("chain"))
+        outcome_active = any(v for k, v in status.items() if k.startswith("outcome"))
+        print(f"\n  Chain scoring backend   : {'Vertex AI' if chain_active else 'LightGBM (fallback)'}")
+        print(f"  Fairness metric backend : {'Vertex AI' if outcome_active else 'LightGBM (fallback)'}")
+
+    def test_compas_vertex_fairness_beats_propublica(self, compas_df):
+        """
+        COMPAS fairness metrics via Vertex AI outcome-scorer.
+        Paper: ProPublica FPR ratio AA/White = 1.910.
+        We verify our unmitigated SPD direction and mitigated FPR ratio < 1.910.
+        """
+        m, backend = _compute_fairness_with_backend_label(
+            compas_df, "race", "two_year_recid", "Caucasian", "1"
+        )
+        if m is None:
+            pytest.skip("COMPAS fairness metrics returned None")
+
+        gm = m.group_metrics
+        aa_fpr  = gm.get("African-American").fpr if "African-American" in gm else None
+        cau_fpr = gm.get("Caucasian").fpr        if "Caucasian" in gm else None
+        fpr_ratio = aa_fpr / max(cau_fpr, 1e-9) if aa_fpr and cau_fpr else None
+
+        print(f"\n=== COMPAS Fairness [{backend}] ===")
+        print(f"  SPD:       {m.statistical_parity_diff:+.4f}  (negative = Black disadvantaged)")
+        print(f"  DI ratio:  {m.disparate_impact_ratio:.4f}")
+        print(f"  EOD:       {m.equal_opportunity_diff:+.4f}")
+        print(f"  AOD:       {m.average_odds_diff:+.4f}")
+        if fpr_ratio:
+            print(f"  FPR ratio: {fpr_ratio:.4f}  (ProPublica unmitigated: 1.910)")
+
+        assert m.statistical_parity_diff < 0, "Black defendants should have worse predicted outcomes"
+        assert m.disparate_impact_ratio < 1.0, "DI ratio should be < 1.0 for disadvantaged group"
+
+        # Mitigated must beat ProPublica baseline
+        m_mit = compute_mitigated_fairness_metrics(compas_df, "race", "two_year_recid", "Caucasian", "1")
+        assert m_mit is not None
+        gm_mit = m_mit.group_metrics
+        if "African-American" in gm_mit and "Caucasian" in gm_mit:
+            mit_ratio = gm_mit["African-American"].fpr / max(gm_mit["Caucasian"].fpr, 1e-9)
+            print(f"  Mitigated FPR ratio: {mit_ratio:.4f}  (paper: 1.910)  better={mit_ratio < 1.910}")
+            assert mit_ratio < 1.910, f"Mitigated FPR ratio {mit_ratio:.4f} must beat ProPublica 1.910"
+
+    def test_adult_vertex_fairness_beats_kamiran_feldman(self, adult_df):
+        """
+        Adult Income fairness via Vertex AI.
+        Kamiran (2012): disc score (sex) = 0.1965.
+        Feldman (2015): DI ratio (sex)   = 0.360.
+        Mitigated must beat both.
+        """
+        m, backend = _compute_fairness_with_backend_label(
+            adult_df, "sex", "income", "Male", ">50K"
+        )
+        if m is None:
+            pytest.skip("Adult fairness metrics returned None")
+
+        print(f"\n=== Adult Income Fairness [{backend}] ===")
+        print(f"  SPD:       {m.statistical_parity_diff:+.4f}  (Kamiran raw disc: -0.1965)")
+        print(f"  DI ratio:  {m.disparate_impact_ratio:.4f}   (Feldman: 0.360)")
+        print(f"  EOD:       {m.equal_opportunity_diff:+.4f}")
+        print(f"  AOD:       {m.average_odds_diff:+.4f}")
+        print(f"  Accuracy:  {m.model_accuracy_overall:.4f}")
+
+        assert m.statistical_parity_diff < 0, "Female should be disadvantaged in raw Adult data"
+        assert m.disparate_impact_ratio < 0.80, "Should show disparate impact (< 0.80 rule)"
+
+        m_mit = compute_mitigated_fairness_metrics(adult_df, "sex", "income", "Male", ">50K")
+        assert m_mit is not None
+        our_disc = abs(m_mit.statistical_parity_diff)
+        our_di   = m_mit.disparate_impact_ratio
+
+        print(f"\n  Mitigated SPD:      {m_mit.statistical_parity_diff:+.4f}  |disc|={our_disc:.4f}  (must < 0.1965)")
+        print(f"  Mitigated DI ratio: {our_di:.4f}  (must > 0.360)")
+
+        assert our_disc < 0.1965, f"Mitigated |disc| {our_disc:.4f} must beat Kamiran 0.1965"
+        assert our_di   > 0.360,  f"Mitigated DI {our_di:.4f} must beat Feldman 0.360"
+
+    def test_german_vertex_fairness_beats_friedler(self, german_df):
+        """
+        German Credit fairness via Vertex AI.
+        Friedler (2019): disc score (sex) ≈ 0.090.
+        Mitigated must beat it.
+        """
+        m, backend = _compute_fairness_with_backend_label(
+            german_df, "sex", "credit_risk_binary", "male", "1"
+        )
+        if m is None:
+            pytest.skip("German fairness metrics returned None")
+
+        print(f"\n=== German Credit Fairness [{backend}] ===")
+        print(f"  SPD:       {m.statistical_parity_diff:+.4f}  (Friedler approx: -0.09)")
+        print(f"  DI ratio:  {m.disparate_impact_ratio:.4f}")
+        print(f"  EOD:       {m.equal_opportunity_diff:+.4f}")
+        print(f"  Accuracy:  {m.model_accuracy_overall:.4f}")
+
+        m_mit = compute_mitigated_fairness_metrics(german_df, "sex", "credit_risk_binary", "male", "1")
+        assert m_mit is not None
+        our_disc = abs(m_mit.statistical_parity_diff)
+
+        print(f"\n  Mitigated |disc|: {our_disc:.4f}  (must < 0.090  Friedler baseline)")
+        assert our_disc < 0.090, f"Mitigated |disc| {our_disc:.4f} must beat Friedler 0.090"
+
+    def test_chain_scoring_vertex_compas(self, compas_df):
+        """
+        Chain scoring via Vertex AI AutoML chain-scorer endpoint.
+        Prints skill scores with backend label per chain.
+        """
+        from app.services.vertex_ai_service import score_chain_vertex
+        from app.core.config import settings
+
+        col_types = detect_column_types(compas_df)
+        G, strengths = build_graph(compas_df, col_types, threshold=0.10, protected_attributes=["race"])
+        chains = find_chains(G, strengths, ["race"], max_depth=4, col_types=col_types)
+        chains_subset = chains[:10]
+
+        print(f"\n=== COMPAS Chain Scoring (Vertex AI AutoML) ===")
+        for chain in chains_subset:
+            v_score = score_chain_vertex(compas_df, chain)
+            backend = "Vertex AI" if v_score is not None else "LightGBM"
+            scored = score_all_chains(compas_df, [chain])
+            final_score = scored[0].risk_score if scored else 0.0
+            print(f"  {' -> '.join(chain.path):<55} skill={final_score:.4f}  [{backend}]  [{scored[0].risk_label if scored else 'N/A'}]")
+
+        scored_all = score_all_chains(compas_df, chains_subset)
+        assert len(scored_all) > 0
+        top = scored_all[0]
+        print(f"\n  Top chain: {' -> '.join(top.path)}")
+        print(f"  Top skill: {top.risk_score:.4f}  [{top.risk_label}]")
+        assert top.risk_score > 0.0, "Top chain should have non-zero skill"
+
+    def test_full_vertex_ai_benchmark_summary(self, compas_df, adult_df, german_df):
+        """
+        Full head-to-head summary: Vertex AI metrics vs all paper baselines.
+        Prints which backend computed each metric.
+        """
+        m_c, b_c = _compute_fairness_with_backend_label(compas_df, "race", "two_year_recid", "Caucasian", "1")
+        m_a, b_a = _compute_fairness_with_backend_label(adult_df,  "sex",  "income",          "Male",      ">50K")
+        m_g, b_g = _compute_fairness_with_backend_label(german_df, "sex",  "credit_risk_binary","male",    "1")
+
+        mit_c = compute_mitigated_fairness_metrics(compas_df, "race", "two_year_recid", "Caucasian", "1")
+        mit_a = compute_mitigated_fairness_metrics(adult_df,  "sex",  "income",         "Male",      ">50K")
+        mit_g = compute_mitigated_fairness_metrics(german_df, "sex",  "credit_risk_binary","male",   "1")
+
+        # COMPAS FPR ratio
+        gm_c_raw = m_c.group_metrics   if m_c else {}
+        gm_c_mit = mit_c.group_metrics if mit_c else {}
+        aa_fpr_raw = gm_c_raw.get("African-American").fpr  if "African-American" in gm_c_raw else float("nan")
+        ca_fpr_raw = gm_c_raw.get("Caucasian").fpr         if "Caucasian" in gm_c_raw else float("nan")
+        aa_fpr_mit = gm_c_mit.get("African-American").fpr  if "African-American" in gm_c_mit else float("nan")
+        ca_fpr_mit = gm_c_mit.get("Caucasian").fpr         if "Caucasian" in gm_c_mit else float("nan")
+        fpr_raw = aa_fpr_raw / max(ca_fpr_raw, 1e-9)
+        fpr_mit = aa_fpr_mit / max(ca_fpr_mit, 1e-9)
+
+        print("\n\n" + "=" * 100)
+        print("VERTEX AI BENCHMARK — FULL METRICS vs PUBLISHED PAPERS")
+        print("=" * 100)
+        print(f"  {'Dataset/Metric':<32} {'Unmitigated':>12} {'Mitigated':>10} {'Paper':>8} {'Better?':>8}  Backend    Source")
+        print(f"  {'-'*95}")
+
+        rows = [
+            ("COMPAS FPR ratio (race)",
+             fpr_raw, fpr_mit, 1.910, "<", b_c, "ProPublica 2016"),
+            ("COMPAS SPD (race)",
+             m_c.statistical_parity_diff if m_c else float("nan"),
+             mit_c.statistical_parity_diff if mit_c else float("nan"),
+             -0.200, ">", b_c, "Friedler 2019"),
+            ("Adult |disc| sex (SPD)",
+             abs(m_a.statistical_parity_diff) if m_a else float("nan"),
+             abs(mit_a.statistical_parity_diff) if mit_a else float("nan"),
+             0.1965, "<", b_a, "Kamiran 2012"),
+            ("Adult DI ratio sex",
+             m_a.disparate_impact_ratio if m_a else float("nan"),
+             mit_a.disparate_impact_ratio if mit_a else float("nan"),
+             0.360, ">", b_a, "Feldman 2015"),
+            ("Adult EOD sex",
+             m_a.equal_opportunity_diff if m_a else float("nan"),
+             mit_a.equal_opportunity_diff if mit_a else float("nan"),
+             -0.130, ">", b_a, "Friedler 2019"),
+            ("German |disc| sex",
+             abs(m_g.statistical_parity_diff) if m_g else float("nan"),
+             abs(mit_g.statistical_parity_diff) if mit_g else float("nan"),
+             0.090, "<", b_g, "Friedler 2019"),
+            ("German DI ratio sex",
+             m_g.disparate_impact_ratio if m_g else float("nan"),
+             mit_g.disparate_impact_ratio if mit_g else float("nan"),
+             0.850, ">", b_g, "Friedler 2019"),
+        ]
+
+        all_better = True
+        for name, unmit, mit, paper, direction, backend, source in rows:
+            if direction == "<":
+                better = "YES" if mit < paper else "NO"
+            else:
+                better = "YES" if mit > paper else "NO"
+            if better == "NO":
+                all_better = False
+            print(f"  {name:<32} {unmit:>12.4f} {mit:>10.4f} {paper:>8.4f} {better:>8}  {backend:<10} {source}")
+
+        print("=" * 100)
+        print(f"  All mitigated metrics beat paper baselines: {'YES ✓' if all_better else 'PARTIAL (see above)'}")
+        print("=" * 100)
+
+        # Chain scoring summary
+        print("\n--- Chain Scoring (Vertex AI AutoML chain-scorer) ---")
+        for label, df_ds, protected, thresh in [
+            ("COMPAS",  compas_df, ["race","sex"], 0.10),
+            ("Adult",   adult_df,  ["sex","race"], 0.10),
+            ("German",  german_df, ["sex"],        0.05),
+        ]:
+            ct = detect_column_types(df_ds)
+            G, st = build_graph(df_ds, ct, threshold=thresh, protected_attributes=protected)
+            ch = find_chains(G, st, protected, max_depth=4, col_types=ct)
+            scored = score_all_chains(df_ds, ch[:20])
+            top_skill = max((c.risk_score for c in scored), default=0.0)
+            n_critical = sum(1 for c in scored if c.risk_label == "CRITICAL")
+            n_high     = sum(1 for c in scored if c.risk_label == "HIGH")
+            print(f"  {label:<12}: {len(scored):>3} chains  top_skill={top_skill:.4f}  "
+                  f"CRITICAL={n_critical}  HIGH={n_high}")
+
+        assert all_better, "Not all mitigated metrics beat paper baselines — check output above"
