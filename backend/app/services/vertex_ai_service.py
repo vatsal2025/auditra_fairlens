@@ -49,6 +49,16 @@ def _get_endpoint_id(dataset: str) -> Optional[str]:
     return mapping.get(dataset) or settings.vertex_ai_endpoint_id
 
 
+def _get_outcome_endpoint_id(dataset: str) -> Optional[str]:
+    mapping = {
+        "compas":      settings.vertex_ai_outcome_compas,
+        "adult_train": settings.vertex_ai_outcome_adult_train,
+        "adult_test":  settings.vertex_ai_outcome_adult_test,
+        "german":      settings.vertex_ai_outcome_german,
+    }
+    return mapping.get(dataset)
+
+
 def _skill_score(accuracy: float, actual: list) -> float:
     """(accuracy - majority_baseline) / (1 - majority_baseline)"""
     counts = Counter(actual)
@@ -187,4 +197,80 @@ def get_shap_vertex(
 
     except Exception as e:
         print(f"[Vertex AI XAI] Attribution failed ({dataset}/{endpoint_id}): {e}")
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Outcome prediction for fairness metric computation
+# ---------------------------------------------------------------------------
+
+def predict_outcome_vertex(
+    df: pd.DataFrame,
+    feature_cols: list,
+    outcome_col: str,
+    positive_outcome: str,
+    sample_size: int = 500,
+) -> Optional[np.ndarray]:
+    """
+    Get binary outcome predictions from Vertex AI AutoML outcome-scorer endpoint.
+    Returns array of 0/1 predictions aligned to a stratified sample of df.
+    Returns None if endpoint not configured or prediction fails → caller falls back to LightGBM.
+    """
+    if not settings.gcp_project_id:
+        return None
+
+    dataset     = _detect_dataset(df)
+    endpoint_id = _get_outcome_endpoint_id(dataset)
+    if not endpoint_id:
+        return None
+
+    available = [c for c in feature_cols if c in df.columns]
+    if not available or outcome_col not in df.columns:
+        return None
+
+    subset = df[available + [outcome_col]].dropna(subset=[outcome_col])
+
+    # Stratified sample by outcome to preserve class balance
+    if len(subset) > sample_size:
+        try:
+            from sklearn.model_selection import train_test_split
+            _, subset = train_test_split(
+                subset, test_size=min(sample_size, len(subset)),
+                stratify=subset[outcome_col].astype(str),
+                random_state=42,
+            )
+        except Exception:
+            subset = subset.sample(n=sample_size, random_state=42)
+
+    subset = subset.reset_index(drop=True)
+    if len(subset) < 20:
+        return None
+
+    try:
+        _init_vertex()
+        from google.cloud import aiplatform
+
+        endpoint  = aiplatform.Endpoint(endpoint_id)
+        instances = subset[available].astype(str).to_dict(orient="records")
+        response  = endpoint.predict(instances=instances)
+
+        preds = []
+        for pred in response.predictions:
+            if isinstance(pred, dict):
+                classes = pred.get("classes", [])
+                scores  = pred.get("scores", [])
+                if classes and scores:
+                    preds.append(str(classes[int(np.argmax(scores))]))
+                else:
+                    preds.append(str(list(pred.values())[0]))
+            else:
+                preds.append(str(pred))
+
+        # Convert to binary using positive_outcome label
+        pos = str(positive_outcome).strip().rstrip(".")
+        binary = np.array([1 if str(p).strip().rstrip(".") == pos else 0 for p in preds])
+        return binary, subset.index.tolist(), subset
+
+    except Exception as e:
+        print(f"[Vertex AI Outcome] Prediction failed ({dataset}/{endpoint_id}): {e}")
         return None

@@ -51,7 +51,9 @@ FastAPI Backend (Python)
       ├── Chain Scorer ──────────► Vertex AI AutoML endpoint (primary)
       │                            LightGBM 5-fold CV (fallback)
       │
-      ├── Fairness Metrics ──────► SPD, DI, EOD, AOD, FPR disparity
+      ├── Fairness Metrics ──────► Vertex AI AutoML outcome endpoint (primary)
+      │                            LightGBM 5-fold CV (fallback)
+      │                            SPD, DI, EOD, AOD, FPR disparity
       │
       ├── Reweighing ────────────► Kamiran & Calders (2012) mitigation
       │
@@ -66,9 +68,10 @@ FastAPI Backend (Python)
 React Frontend (Vite + TypeScript + D3 + Tailwind)
 ```
 
-**Vertex AI Integration (2 uses):**
-1. **AutoML chain scoring** — 4 trained models (COMPAS/Adult-train/Adult-test/German), each predicts protected attribute from chain features. Replaces local LightGBM for cloud-scale inference.
-2. **Gemini via Vertex AI** — chat assistant and chain explanations billed against GCP credits, not AI Studio quota.
+**Vertex AI Integration (3 uses):**
+1. **AutoML chain scoring** — 4 models predict protected attribute from chain features (COMPAS/Adult-train/Adult-test/German). Identifies indirect discrimination paths.
+2. **AutoML fairness metrics** — 4 models predict outcome (recidivism/income/credit risk) from non-protected features. Drives SPD, DI ratio, EOD, AOD computation via cloud inference.
+3. **Gemini via Vertex AI** — AI chat assistant and chain explanations billed against GCP credits, not AI Studio quota.
 
 ---
 
@@ -132,12 +135,19 @@ GEMINI_API_KEY=
 ### One-time Vertex AI Setup
 
 ```bash
-# Step 1 — Upload datasets + launch AutoML training (non-blocking, 1-3 hrs)
+# Step 1 — Upload datasets + launch chain-scorer training (non-blocking, 1-3 hrs)
 python setup_vertex.py
 
-# Step 2 — After all 4 jobs show "Succeeded" in GCP console
+# Step 2 — After chain-scorer jobs show "Succeeded"
 python deploy_vertex.py
 # Auto-writes VERTEX_AI_ENDPOINT_* to .env
+
+# Step 3 — Launch outcome-scorer training (same datasets, different targets)
+python train_outcome_models.py
+
+# Step 4 — After outcome-scorer jobs show "Succeeded"
+python deploy_outcome_models.py
+# Auto-writes VERTEX_AI_OUTCOME_* to .env
 ```
 
 ### Run Server

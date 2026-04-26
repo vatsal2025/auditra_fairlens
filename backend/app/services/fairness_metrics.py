@@ -1,5 +1,6 @@
 """
-Standard fairness metrics — computed from data + a model trained on non-protected features.
+Standard fairness metrics — computed from Vertex AI outcome predictions (primary)
+or LightGBM trained on non-protected features (fallback).
 
 Metrics implemented (Friedler et al. 2019 / Verma & Rubin 2018 taxonomy):
   - Statistical Parity Difference (SPD)
@@ -9,9 +10,8 @@ Metrics implemented (Friedler et al. 2019 / Verma & Rubin 2018 taxonomy):
   - Predictive Parity Difference (PPD)   [precision parity]
   - Group-level accuracy, TPR, FPR, precision
 
-The model trained here is ONLY for metric computation — it predicts the outcome
-using all features except the protected attribute, mirroring Friedler et al. 2019
-experimental setup exactly.
+Primary path: Vertex AI AutoML outcome-scorer endpoint (full cloud inference).
+Fallback: LightGBM 5-fold CV trained locally — used when Vertex AI endpoint not configured.
 """
 from __future__ import annotations
 
@@ -107,6 +107,86 @@ def _cross_val_predict_weighted(
     return y_proba
 
 
+def _compute_via_vertex_ai(
+    df: pd.DataFrame,
+    protected_attr: str,
+    outcome_col: str,
+    privileged_value: str,
+    positive_outcome: str,
+) -> Optional[FairnessMetrics]:
+    """
+    Compute fairness metrics using Vertex AI AutoML outcome-scorer endpoint.
+    Sends a stratified sample to the cloud endpoint and computes group metrics
+    from the returned predictions. Returns None if endpoint not available.
+    """
+    try:
+        from app.services.vertex_ai_service import predict_outcome_vertex
+    except ImportError:
+        return None
+
+    feature_cols = [c for c in df.columns if c != protected_attr and c != outcome_col]
+    result = predict_outcome_vertex(df, feature_cols, outcome_col, positive_outcome)
+    if result is None:
+        return None
+
+    y_pred, _, subset = result
+
+    y_raw = subset[outcome_col]
+    y = _binarize_outcome(y_raw, positive_outcome)
+    protected_col = subset[protected_attr].astype(str) if protected_attr in subset.columns else None
+    if protected_col is None:
+        return None
+
+    groups = protected_col.unique().tolist()
+    group_metrics_map: Dict[str, GroupMetrics] = {}
+    for gval in groups:
+        mask = (protected_col == gval).values
+        group_metrics_map[gval] = _group_metrics(y, y_pred, mask, str(gval))
+
+    priv_val = str(privileged_value)
+    unpriv_vals = [str(g) for g in groups if str(g) != priv_val]
+    if priv_val not in group_metrics_map or not unpriv_vals:
+        return None
+
+    priv = group_metrics_map[priv_val]
+    total_unpriv = sum(group_metrics_map[v].size for v in unpriv_vals)
+    if total_unpriv == 0:
+        return None
+
+    def _wavg(attr: str) -> float:
+        return sum(
+            getattr(group_metrics_map[v], attr) * group_metrics_map[v].size
+            for v in unpriv_vals
+        ) / total_unpriv
+
+    unpriv_pred_rate = _wavg("prediction_rate")
+    unpriv_tpr       = _wavg("tpr")
+    unpriv_fpr       = _wavg("fpr")
+    unpriv_precision = _wavg("precision")
+
+    spd       = round(unpriv_pred_rate - priv.prediction_rate, 4)
+    dir_ratio = round(unpriv_pred_rate / priv.prediction_rate, 4) if priv.prediction_rate > 0 else 0.0
+    eod       = round(unpriv_tpr - priv.tpr, 4)
+    aod       = round(((unpriv_tpr - priv.tpr) + (unpriv_fpr - priv.fpr)) / 2, 4)
+    ppd       = round(unpriv_precision - priv.precision, 4)
+    overall_acc = float((y == y_pred).mean())
+
+    print(f"[Vertex AI Fairness] {protected_attr}: SPD={spd} DI={dir_ratio} EOD={eod}")
+    return FairnessMetrics(
+        protected_attribute=protected_attr,
+        outcome_column=outcome_col,
+        privileged_group=priv_val,
+        positive_outcome=str(positive_outcome),
+        statistical_parity_diff=spd,
+        disparate_impact_ratio=dir_ratio,
+        equal_opportunity_diff=eod,
+        average_odds_diff=aod,
+        predictive_parity_diff=ppd,
+        model_accuracy_overall=round(overall_acc, 4),
+        group_metrics=group_metrics_map,
+    )
+
+
 def compute_fairness_metrics(
     df: pd.DataFrame,
     protected_attr: str,
@@ -116,16 +196,15 @@ def compute_fairness_metrics(
     sample_weight: Optional[np.ndarray] = None,
 ) -> Optional[FairnessMetrics]:
     """
-    Train a LightGBM model (without protected_attr) and compute standard group fairness metrics.
+    Compute group fairness metrics using Vertex AI outcome-scorer (primary) or
+    LightGBM 5-fold CV (fallback when Vertex AI endpoint not configured).
 
-    If sample_weight provided, trains with those weights per fold (enables post-reweighing
-    fairness measurement — Kamiran & Calders 2012 mitigation).
+    If sample_weight provided, uses LightGBM path with per-fold weights
+    (Kamiran & Calders 2012 reweighing mitigation).
 
     Returns None if data is insufficient or missing required columns.
     """
     if protected_attr not in df.columns or outcome_col not in df.columns:
-        return None
-    if not LGB_AVAILABLE:
         return None
 
     subset = df.dropna(subset=[protected_attr, outcome_col]).reset_index(drop=True)
@@ -134,6 +213,18 @@ def compute_fairness_metrics(
 
     feature_cols = [c for c in subset.columns if c != protected_attr and c != outcome_col]
     if not feature_cols:
+        return None
+
+    # Vertex AI primary path — skip if sample_weight given (reweighing uses LightGBM)
+    if sample_weight is None:
+        vertex_result = _compute_via_vertex_ai(
+            df, protected_attr, outcome_col, privileged_value, positive_outcome
+        )
+        if vertex_result is not None:
+            return vertex_result
+
+    # LightGBM fallback
+    if not LGB_AVAILABLE:
         return None
 
     X = _encode_df(subset[feature_cols])
@@ -156,12 +247,10 @@ def compute_fairness_metrics(
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     try:
         if sample_weight is not None:
-            # Align weights to subset rows (subset was reset_index'd)
             w = sample_weight[:len(subset)] if len(sample_weight) >= len(subset) else sample_weight
             y_pred_proba = _cross_val_predict_weighted(model, X, y, w, cv)
         else:
             y_pred_proba = cross_val_predict(model, X, y, cv=cv, method="predict_proba")[:, 1]
-        # Threshold at 0.5
         y_pred = (y_pred_proba >= 0.5).astype(int)
     except Exception:
         return None
