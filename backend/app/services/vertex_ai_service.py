@@ -43,9 +43,11 @@ def _get_endpoint_id(dataset: str) -> Optional[str]:
     mapping = {
         "compas":      settings.vertex_ai_endpoint_compas,
         "adult_train": settings.vertex_ai_endpoint_adult_train,
-        "adult_test":  settings.vertex_ai_endpoint_adult_test,
         "german":      settings.vertex_ai_endpoint_german,
     }
+    # adult_test shares adult_train endpoint (same features, different split)
+    if dataset == "adult_test":
+        return settings.vertex_ai_endpoint_adult_test or settings.vertex_ai_endpoint_adult_train
     return mapping.get(dataset) or settings.vertex_ai_endpoint_id
 
 
@@ -53,9 +55,11 @@ def _get_outcome_endpoint_id(dataset: str) -> Optional[str]:
     mapping = {
         "compas":      settings.vertex_ai_outcome_compas,
         "adult_train": settings.vertex_ai_outcome_adult_train,
-        "adult_test":  settings.vertex_ai_outcome_adult_test,
         "german":      settings.vertex_ai_outcome_german,
     }
+    # adult_test shares adult_train outcome endpoint (same income prediction task)
+    if dataset == "adult_test":
+        return settings.vertex_ai_outcome_adult_test or settings.vertex_ai_outcome_adult_train
     return mapping.get(dataset)
 
 
