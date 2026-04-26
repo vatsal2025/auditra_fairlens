@@ -108,19 +108,25 @@ Open `http://localhost:5173`
 
 ### Environment Variables
 
+All AI/ML operations run through Vertex AI. No AI Studio API key needed.
+
 ```env
-# GCP credentials (ADC auto-handles on GCP VM)
+# GCP — ADC handles auth automatically on VM
+# Local dev: run `gcloud auth application-default login`
 GCP_PROJECT_ID=your-project-id
 GCP_REGION=us-central1
 
-# Vertex AI AutoML endpoints (written by deploy_vertex.py)
+# Vertex AI chain-scorer endpoints (written by deploy_vertex.py)
 VERTEX_AI_ENDPOINT_COMPAS=
 VERTEX_AI_ENDPOINT_ADULT_TRAIN=
 VERTEX_AI_ENDPOINT_ADULT_TEST=
 VERTEX_AI_ENDPOINT_GERMAN=
 
-# AI Studio fallback (only if GCP_PROJECT_ID not set)
-GEMINI_API_KEY=
+# Vertex AI outcome-scorer endpoints (written by deploy_outcome_models.py)
+VERTEX_AI_OUTCOME_COMPAS=
+VERTEX_AI_OUTCOME_ADULT_TRAIN=
+VERTEX_AI_OUTCOME_ADULT_TEST=
+VERTEX_AI_OUTCOME_GERMAN=
 ```
 
 ---

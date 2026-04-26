@@ -5,9 +5,6 @@ from typing import Optional
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
-    # Gemini via AI Studio (fallback only — Vertex AI takes priority on VM)
-    gemini_api_key: str = ""
-
     # GCP — ADC handles auth automatically on VM, no JSON file needed
     google_application_credentials: str = ""
     gcp_project_id: str = "project-6bf0badc-9510-4a48-9e6"

@@ -1,40 +1,33 @@
 """
-Gemini integration via Vertex AI (preferred — uses GCP credits) or AI Studio API key.
+Gemini integration via Vertex AI — all AI calls use GCP credits (ADC auth).
 
-Priority:
-  1. Vertex AI — if GCP_PROJECT_ID + GOOGLE_APPLICATION_CREDENTIALS configured
-  2. AI Studio — if GEMINI_API_KEY configured
-  3. Fallback text — no credentials at all
+No AI Studio API key used. On GCP VM, Application Default Credentials handle auth
+automatically. On local dev: run `gcloud auth application-default login`.
 """
 from typing import List, Optional
 
 from app.core.config import settings
 from app.models.schemas import Chain
 
+import vertexai
+from vertexai.generative_models import Content, GenerativeModel, Part
+
 # Cache keyed on (path_tuple, protected_attribute) — same chain = same explanation
 _explanation_cache: dict[tuple, str] = {}
 
-
-def _use_vertex() -> bool:
-    # On GCP VM, ADC handles auth automatically — only project ID needed
-    return bool(settings.gcp_project_id)
+_VERTEX_INIT = False
 
 
-def _use_aistudio() -> bool:
-    return bool(settings.gemini_api_key)
+def _init_vertex():
+    global _VERTEX_INIT
+    if not _VERTEX_INIT:
+        vertexai.init(project=settings.gcp_project_id, location=settings.gcp_region)
+        _VERTEX_INIT = True
 
 
-def _get_vertex_model(model_name: str):
-    import vertexai
-    from vertexai.generative_models import GenerativeModel
-    vertexai.init(project=settings.gcp_project_id, location=settings.gcp_region)
+def _vertex_model(model_name: str) -> GenerativeModel:
+    _init_vertex()
     return GenerativeModel(model_name)
-
-
-def _get_aistudio_model(model_name: str):
-    import google.generativeai as genai
-    genai.configure(api_key=settings.gemini_api_key)
-    return genai.GenerativeModel(model_name)
 
 
 # ---------------------------------------------------------------------------
@@ -65,6 +58,9 @@ def explain_chain(chain: Chain) -> str:
     if cache_key in _explanation_cache:
         return _explanation_cache[cache_key]
 
+    if not settings.gcp_project_id:
+        return _fallback_explanation(chain)
+
     hop_details = "\n".join(
         f"  {h.source} → {h.target} (predictive strength: {h.weight:.2%})"
         for h in chain.hops
@@ -77,19 +73,9 @@ def explain_chain(chain: Chain) -> str:
         hop_details=hop_details,
     )
 
-    # Use lighter model for explanations — deterministic text, no reasoning needed
-    explanation_model = "gemini-1.5-flash-8b"
-
     try:
-        if _use_vertex():
-            model = _get_vertex_model(explanation_model)
-            response = model.generate_content(prompt)
-        elif _use_aistudio():
-            model = _get_aistudio_model(explanation_model)
-            response = model.generate_content(prompt)
-        else:
-            return _fallback_explanation(chain)
-
+        model = _vertex_model("gemini-1.5-flash-8b")
+        response = model.generate_content(prompt)
         result = response.text.strip()
         _explanation_cache[cache_key] = result
         return result
@@ -130,43 +116,27 @@ def chat(
     history: List[dict],
     dataset_name: Optional[str] = None,
 ) -> str:
+    if not settings.gcp_project_id:
+        return (
+            "Vertex AI not configured. Set GCP_PROJECT_ID in .env and ensure "
+            "Application Default Credentials are active (run `gcloud auth application-default login`)."
+        )
+
     audit_context = _build_audit_context(chains, dataset_name)
     system_content = SYSTEM_PROMPT.format(audit_context=audit_context)
     full_prompt = f"{system_content}\n\n---\nUser: {user_message}"
 
     try:
-        if _use_vertex():
-            return _chat_vertex(full_prompt, history)
-        elif _use_aistudio():
-            return _chat_aistudio(full_prompt, history)
-        else:
-            return "No AI credentials configured. Set GCP_PROJECT_ID + GOOGLE_APPLICATION_CREDENTIALS (Vertex AI) or GEMINI_API_KEY in your .env file."
+        model = _vertex_model("gemini-2.5-flash")
+        vertex_history = [
+            Content(role=turn["role"], parts=[Part.from_text(turn["content"])])
+            for turn in history
+        ]
+        chat_session = model.start_chat(history=vertex_history)
+        response = chat_session.send_message(full_prompt)
+        return response.text.strip()
     except Exception as e:
-        return f"Error communicating with Gemini: {str(e)}"
-
-
-def _chat_vertex(full_prompt: str, history: List[dict]) -> str:
-    from vertexai.generative_models import Content, Part
-    model = _get_vertex_model("gemini-2.5-flash")
-
-    vertex_history = [
-        Content(role=turn["role"], parts=[Part.from_text(turn["content"])])
-        for turn in history
-    ]
-    chat_session = model.start_chat(history=vertex_history)
-    response = chat_session.send_message(full_prompt)
-    return response.text.strip()
-
-
-def _chat_aistudio(full_prompt: str, history: List[dict]) -> str:
-    model = _get_aistudio_model("gemini-2.5-flash")
-    gemini_history = [
-        {"role": turn["role"], "parts": [turn["content"]]}
-        for turn in history
-    ]
-    chat_session = model.start_chat(history=gemini_history)
-    response = chat_session.send_message(full_prompt)
-    return response.text.strip()
+        return f"Vertex AI Gemini error: {str(e)}"
 
 
 def _build_audit_context(chains: List[Chain], dataset_name: Optional[str]) -> str:
