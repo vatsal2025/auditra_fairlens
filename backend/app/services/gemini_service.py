@@ -1,18 +1,16 @@
 """
-Gemini integration via Vertex AI — all AI calls use GCP credits (ADC auth).
+Gemini integration — two backends, automatic fallback:
 
-No AI Studio API key used. On GCP VM, Application Default Credentials handle auth
-automatically. On local dev: run `gcloud auth application-default login`.
+1. Google AI Studio (GEMINI_API_KEY in .env) — simplest, free tier available
+2. Vertex AI (GCP_PROJECT_ID + ADC) — uses GCP credits, may require model enablement
+3. Rule-based fallback — always works, no AI needed
 """
 from typing import List, Optional
 
 from app.core.config import settings
 from app.models.schemas import Chain
 
-import vertexai
-from vertexai.generative_models import Content, GenerativeModel, Part
-
-# Cache keyed on (path_tuple, protected_attribute) — same chain = same explanation
+# Cache keyed on (path_tuple, protected_attribute)
 _explanation_cache: dict[tuple, str] = {}
 
 _VERTEX_INIT = False
@@ -21,13 +19,9 @@ _VERTEX_INIT = False
 def _init_vertex():
     global _VERTEX_INIT
     if not _VERTEX_INIT:
+        import vertexai
         vertexai.init(project=settings.gcp_project_id, location=settings.gcp_region)
         _VERTEX_INIT = True
-
-
-def _vertex_model(model_name: str) -> GenerativeModel:
-    _init_vertex()
-    return GenerativeModel(model_name)
 
 
 # ---------------------------------------------------------------------------
@@ -53,13 +47,26 @@ Write a 3-4 sentence plain English explanation that:
 Do NOT use bullet points. Write in paragraph form."""
 
 
+def _generate(prompt: str) -> str:
+    """Try AI Studio first, then Vertex AI."""
+    if settings.gemini_api_key:
+        import google.generativeai as genai
+        genai.configure(api_key=settings.gemini_api_key)
+        model = genai.GenerativeModel("gemini-2.0-flash")
+        return model.generate_content(prompt).text.strip()
+
+    if settings.gcp_project_id:
+        _init_vertex()
+        from vertexai.generative_models import GenerativeModel
+        return GenerativeModel("gemini-2.0-flash-001").generate_content(prompt).text.strip()
+
+    raise RuntimeError("No Gemini credentials configured")
+
+
 def explain_chain(chain: Chain) -> str:
     cache_key = (tuple(chain.path), chain.protected_attribute)
     if cache_key in _explanation_cache:
         return _explanation_cache[cache_key]
-
-    if not settings.gcp_project_id:
-        return _fallback_explanation(chain)
 
     hop_details = "\n".join(
         f"  {h.source} → {h.target} (predictive strength: {h.weight:.2%})"
@@ -72,11 +79,8 @@ def explain_chain(chain: Chain) -> str:
         risk_label=chain.risk_label,
         hop_details=hop_details,
     )
-
     try:
-        model = _vertex_model("gemini-1.5-flash-002")
-        response = model.generate_content(prompt)
-        result = response.text.strip()
+        result = _generate(prompt)
         _explanation_cache[cache_key] = result
         return result
     except Exception:
@@ -119,27 +123,96 @@ def chat(
     history: List[dict],
     dataset_name: Optional[str] = None,
 ) -> str:
-    if not settings.gcp_project_id:
-        return (
-            "Vertex AI not configured. Set GCP_PROJECT_ID in .env and ensure "
-            "Application Default Credentials are active (run `gcloud auth application-default login`)."
-        )
-
     audit_context = _build_audit_context(chains, dataset_name)
     system_content = SYSTEM_PROMPT.format(audit_context=audit_context)
     full_prompt = f"{system_content}\n\n---\nUser: {user_message}"
 
-    try:
-        model = _vertex_model("gemini-1.5-flash-002")
-        vertex_history = [
-            Content(role=turn["role"], parts=[Part.from_text(turn["content"])])
-            for turn in history
-        ]
-        chat_session = model.start_chat(history=vertex_history)
-        response = chat_session.send_message(full_prompt)
-        return response.text.strip()
-    except Exception as e:
-        return f"Vertex AI Gemini error: {str(e)}"
+    if settings.gemini_api_key:
+        try:
+            import google.generativeai as genai
+            from google.generativeai.types import HarmCategory, HarmBlockThreshold
+            genai.configure(api_key=settings.gemini_api_key)
+            model = genai.GenerativeModel("gemini-2.0-flash")
+            hist = [{"role": t["role"], "parts": [t["content"]]} for t in history]
+            session = model.start_chat(history=hist)
+            return session.send_message(full_prompt).text.strip()
+        except Exception as e:
+            return _rule_based_chat(user_message, chains)
+
+    if settings.gcp_project_id:
+        try:
+            _init_vertex()
+            from vertexai.generative_models import Content, GenerativeModel, Part
+            model = GenerativeModel("gemini-2.0-flash-001")
+            vertex_history = [
+                Content(role=t["role"], parts=[Part.from_text(t["content"])])
+                for t in history
+            ]
+            session = model.start_chat(history=vertex_history)
+            return session.send_message(full_prompt).text.strip()
+        except Exception:
+            return _rule_based_chat(user_message, chains)
+
+    return _rule_based_chat(user_message, chains)
+
+
+def _rule_based_chat(message: str, chains: List[Chain]) -> str:
+    msg = message.lower()
+    high = [c for c in chains if c.risk_label in ("HIGH", "CRITICAL")]
+    top = chains[0] if chains else None
+
+    if any(w in msg for w in ["fix", "remove", "cut", "break", "mitigat"]):
+        if top:
+            rows = "\n".join(
+                f"| {' → '.join(c.path)} | {c.risk_label} ({c.risk_score:.0%}) | `{c.weakest_link}` |"
+                for c in chains[:5]
+            )
+            return (
+                f"**Recommended fix:** Remove `{top.weakest_link}` — weakest link in the highest-risk chain.\n\n"
+                f"| Chain | Risk | Weakest Link |\n|---|---|---|\n{rows}"
+            )
+
+    if any(w in msg for w in ["chain", "logic", "how", "explain", "what", "work"]):
+        if top:
+            rows = "\n".join(
+                f"| {i+1} | {' → '.join(c.path)} | {c.risk_label} | {c.risk_score:.0%} |"
+                for i, c in enumerate(chains[:5])
+            )
+            return (
+                f"**Chain logic:** Each feature hop is a statistical proxy. Individually neutral features "
+                f"chain together to reconstruct a protected attribute.\n\n"
+                f"Top chain: `{' → '.join(top.path)}` → `{top.protected_attribute}` "
+                f"({top.risk_score:.0%} skill above random baseline)\n\n"
+                f"| # | Path | Risk | Skill |\n|---|---|---|---|\n{rows}"
+            )
+
+    if any(w in msg for w in ["complian", "regulat", "law", "eu", "act", "legal", "gdpr", "ecoa"]):
+        return (
+            "**Compliance implications:**\n"
+            "- **EU AI Act Article 10** — data governance must prevent proxy discrimination in training data\n"
+            "- **GDPR Article 22** — prohibits automated decisions producing legal effects from protected proxies\n"
+            "- **US ECOA** — adverse action cannot stem from protected-class proxy features\n\n"
+            f"{'Chains with skill >30% are high-priority compliance risks.' if high else 'No HIGH/CRITICAL chains — lower compliance risk.'}"
+        )
+
+    if any(w in msg for w in ["fairness", "metric", "spd", "disparate", "impact", "parity", "tpr", "fpr"]):
+        return (
+            "**Fairness metrics in this audit:**\n"
+            "- **SPD** — Statistical Parity Diff: P(ŷ=1|unprivileged) − P(ŷ=1|privileged). Fair if |SPD| < 0.1\n"
+            "- **DI** — Disparate Impact ratio: should be ≥ 0.8 (80% rule, EEOC standard)\n"
+            "- **EOD** — Equal Opportunity Diff: TPR gap. Fair if |EOD| < 0.1\n"
+            "- **AOD** — Average Odds Diff: mean of TPR + FPR gaps\n\n"
+            "Check the Fairness Metrics panel for your dataset's exact values."
+        )
+
+    n_high = len(high)
+    return (
+        f"**Audit summary:** {len(chains)} relay chains found, {n_high} HIGH/CRITICAL risk.\n\n"
+        + (f"Top risk: `{' → '.join(top.path)}` predicts `{top.protected_attribute}` "
+           f"with **{top.risk_score:.0%} skill** above random baseline. "
+           f"Cut `{top.weakest_link}` to break it.\n\n" if top else "")
+        + "Ask about: chain logic · compliance · how to fix · fairness metrics"
+    )
 
 
 def _build_audit_context(chains: List[Chain], dataset_name: Optional[str]) -> str:
@@ -147,7 +220,6 @@ def _build_audit_context(chains: List[Chain], dataset_name: Optional[str]) -> st
     if dataset_name:
         lines.append(f"Dataset: {dataset_name}")
     lines.append(f"Total chains found: {len(chains)}")
-
     for i, c in enumerate(chains[:10], 1):
         lines.append(
             f"Chain {i}: {' → '.join(c.path)} | "
@@ -155,5 +227,4 @@ def _build_audit_context(chains: List[Chain], dataset_name: Optional[str]) -> st
             f"Risk: {c.risk_label} ({c.risk_score:.0%} skill) | "
             f"Weakest link: {c.weakest_link}"
         )
-
     return "\n".join(lines)

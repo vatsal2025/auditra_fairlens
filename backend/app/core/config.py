@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     gcp_project_id: str = "project-6bf0badc-9510-4a48-9e6"
     gcp_region: str = "us-central1"
 
+    # Gemini API key (Google AI Studio) — alternative to Vertex AI for Gemini chat
+    # Get free key at: aistudio.google.com/app/apikey
+    gemini_api_key: Optional[str] = None
+
     # Vertex AI chain-scorer endpoints (predict protected attr) — deploy_vertex.py
     vertex_ai_endpoint_compas:      Optional[str] = None
     vertex_ai_endpoint_adult_train: Optional[str] = None
