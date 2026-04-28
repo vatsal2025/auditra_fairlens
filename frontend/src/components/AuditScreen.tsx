@@ -43,7 +43,7 @@ function CleanDatasetBanner({ summary }: { summary: string }) {
             ))}
           </ul>
           <p className="mt-4 text-xs text-slate-500">
-            The graph above still shows all feature relationships — hover nodes to explore correlations.
+            The graph above still shows all feature relationships. Hover nodes to explore correlations.
           </p>
         </div>
       </div>
@@ -141,7 +141,7 @@ export default function AuditScreen({ uploadData, initialAuditData, onAuditCompl
             ${compliant
               ? 'bg-green-900/40 border-green-700 text-green-300'
               : 'bg-red-900/40 border-red-700 text-red-300'}`}>
-            {compliant ? '✅ EU AI Act Compliant' : '❌ Non-Compliant — fixes required'}
+            {compliant ? '✅ EU AI Act Compliant' : '❌ Non-Compliant - fixes required'}
           </div>
 
           <p className="text-slate-400 text-sm hidden lg:block ml-2 max-w-lg truncate">{audit.summary}</p>
@@ -287,7 +287,7 @@ export default function AuditScreen({ uploadData, initialAuditData, onAuditCompl
             <div>
               <p className="text-green-300 font-semibold text-sm">No high-risk patterns detected</p>
               <p className="text-slate-400 text-xs mt-1">
-                All {audit.chains.length} chains scored LOW — no feature combination reconstructs the
+                All {audit.chains.length} chains scored LOW - no feature combination reconstructs the
                 protected attribute significantly above random chance. This dataset looks clean for
                 the selected attributes. Try a lower threshold or deeper depth to be thorough.
               </p>

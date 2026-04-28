@@ -188,7 +188,7 @@ export default function UploadScreen({ onUploadComplete, onAuditComplete, upload
         </h1>
         <p className="text-slate-400 text-lg max-w-xl mx-auto">
           Most fairness tools only flag direct links between a single feature and a protected attribute.
-          We trace multi-step proxy chains — sequences of seemingly neutral variables that together encode race, gender, or age without ever naming them.
+          We trace multi-step proxy chains: sequences of seemingly neutral variables that together encode race, gender, or age without ever naming them.
         </p>
       </div>
 
@@ -200,7 +200,7 @@ export default function UploadScreen({ onUploadComplete, onAuditComplete, upload
               <p className="text-white text-sm font-semibold mb-1">Try with UCI Adult Income Dataset</p>
               <p className="text-slate-400 text-xs leading-relaxed">
                 48,842 US census records (1994). Features: age, occupation, education, marital status, hours/week, capital gain/loss, native country.
-                Target: income &gt;50K. Used to expose the Amazon 2018 hiring AI scandal —
+                Target: income &gt;50K. Used to expose the Amazon 2018 hiring AI scandal:
                 <span className="text-red-400 font-mono"> occupation → marital_status → relationship → sex</span> with skill 0.51.
               </p>
             </div>
@@ -275,7 +275,7 @@ export default function UploadScreen({ onUploadComplete, onAuditComplete, upload
           </p>
           <p className="text-slate-600 text-xs mb-3">
             Pick demographic attributes (gender, race, age group). ID columns, phone numbers, or
-            unique identifiers will return no chains — they have no correlation with other features.
+            unique identifiers will return no chains. They have no correlation with other features.
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-6">
@@ -318,7 +318,7 @@ export default function UploadScreen({ onUploadComplete, onAuditComplete, upload
 
           <div className="mb-6">
             <label className="text-sm text-slate-400 block mb-1">
-              Outcome column <span className="text-slate-600 text-xs">(optional — enables fairness metrics)</span>
+              Outcome column <span className="text-slate-600 text-xs">(optional, enables fairness metrics)</span>
             </label>
             <p className="text-slate-600 text-xs mb-2">
               The column your model predicts (e.g. income, loan_approved, hired). Required for SPD, DI, EOD, AOD.
@@ -329,7 +329,7 @@ export default function UploadScreen({ onUploadComplete, onAuditComplete, upload
               className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white
                 focus:outline-none focus:border-slate-400 cursor-pointer"
             >
-              <option value="">— Select outcome for fairness metrics —</option>
+              <option value="">Select outcome for fairness metrics</option>
               {columns
                 .filter(col => !selected.has(col.name))
                 .map(col => (

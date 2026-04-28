@@ -58,7 +58,7 @@ const METRICS = [
     key: 'disparate_impact_ratio' as const,
     label: 'Disparate Impact',
     abbrev: 'DI',
-    desc: '80% rule — ratio of group prediction rates',
+    desc: '80% rule: ratio of group prediction rates',
     scale: 2.0,
     paper: { ref: "Feldman '15", val: 0.36 },
     isDI: true,
@@ -92,7 +92,7 @@ export default function FairnessPanel({ metrics, mitigatedMetrics }: Props) {
   if (!metrics?.length) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-slate-500 text-sm">No fairness metrics — run audit with outcome column</p>
+        <p className="text-slate-500 text-sm">No fairness metrics. Run audit with outcome column.</p>
       </div>
     )
   }
@@ -205,7 +205,7 @@ export default function FairnessPanel({ metrics, mitigatedMetrics }: Props) {
       {Object.keys(m.group_metrics).length > 0 && (
         <div className="shrink-0">
           <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-            Group Breakdown — {m.protected_attribute}
+            Group Breakdown: {m.protected_attribute}
           </h4>
           <div className="space-y-2">
             {Object.entries(m.group_metrics).map(([grp, gm]) => {
