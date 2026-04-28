@@ -100,6 +100,20 @@ export default function ChatBox({ sessionId }: Props) {
         <div ref={bottomRef} />
       </div>
 
+      {messages.length === 1 && (
+        <button
+          onClick={() => setInput('So what all chains exist in the system, and what do all of them mean?')}
+          className="mt-3 w-full text-left px-3 py-2.5 rounded-xl border border-green-400/60 bg-green-400/10
+            hover:bg-green-400/20 hover:border-green-300 transition-all group
+            shadow-[0_0_12px_rgba(74,222,128,0.25)] hover:shadow-[0_0_20px_rgba(74,222,128,0.45)]"
+        >
+          <span className="text-xs text-green-400/80 font-semibold uppercase tracking-wider">Try asking</span>
+          <p className="text-sm text-green-200 mt-0.5 group-hover:text-white transition-colors">
+            "So what all chains exist in the system, and what do all of them mean?"
+          </p>
+        </button>
+      )}
+
       <div className="mt-3 flex gap-2">
         <input
           value={input}

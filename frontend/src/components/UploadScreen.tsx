@@ -178,9 +178,8 @@ export default function UploadScreen({ onUploadComplete, onAuditComplete, upload
           <span className="text-red-400">Discrimination Chains</span>
         </h1>
         <p className="text-slate-400 text-lg max-w-xl mx-auto">
-          Existing tools catch <code className="text-slate-300 bg-slate-800 px-1 rounded">zip code → race</code>.
-          We catch <code className="text-slate-300 bg-slate-800 px-1 rounded">zip → income → credit → race</code>.
-          The 3-hop chains every biased AI is built on.
+          Most fairness tools only flag direct links between a single feature and a protected attribute.
+          We trace multi-step proxy chains — sequences of seemingly neutral variables that together encode race, gender, or age without ever naming them.
         </p>
       </div>
 
@@ -232,6 +231,12 @@ export default function UploadScreen({ onUploadComplete, onAuditComplete, upload
             </>
           )}
         </div>
+      )}
+
+      {!columns.length && (
+        <p className="mt-3 text-center text-slate-500 text-xs">
+          Note: Please wait! Initial loading of the dataset may take some time.
+        </p>
       )}
 
       {error && (

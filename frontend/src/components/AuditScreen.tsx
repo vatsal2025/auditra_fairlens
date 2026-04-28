@@ -258,15 +258,14 @@ export default function AuditScreen({ uploadData, initialAuditData, onAuditCompl
             <div className="flex gap-1 mb-3 shrink-0">
               <button
                 onClick={() => setActiveTab('chat')}
-                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors
-                  ${activeTab === 'chat'
-                    ? 'bg-red-600 text-white shadow-lg shadow-red-900/40'
-                    : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                className="flex-1 py-2 rounded-lg text-sm font-bold transition-all
+                  bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-700/60
+                  ring-1 ring-red-400/50 hover:ring-red-400 hover:shadow-red-500/70"
               >
                 💬 Ask Gemini
               </button>
             </div>
-            <div className="flex-1 min-h-0 overflow-hidden">
+<div className="flex-1 min-h-0 overflow-hidden">
               <ChatBox sessionId={uploadData.session_id} />
             </div>
           </div>

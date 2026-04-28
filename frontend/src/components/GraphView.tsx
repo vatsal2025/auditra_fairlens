@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as d3 from 'd3'
 import { AuditResponse, Chain, GraphNode } from '../services/api'
 
@@ -24,6 +24,7 @@ const RISK_COLORS: Record<string, string> = {
 export default function GraphView({ audit, selectedChain, onNodeClick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   useEffect(() => {
     const el = svgRef.current
@@ -61,7 +62,7 @@ export default function GraphView({ audit, selectedChain, onNodeClick }: Props) 
       .join('marker')
       .attr('id', d => `arrow-${d}`)
       .attr('viewBox', '0 -5 10 10')
-      .attr('refX', 28)
+      .attr('refX', 42)
       .attr('refY', 0)
       .attr('markerWidth', 6)
       .attr('markerHeight', 6)
@@ -76,10 +77,10 @@ export default function GraphView({ audit, selectedChain, onNodeClick }: Props) 
     const simulation = d3.forceSimulation<SimNode>(nodesCopy)
       .force('link', d3.forceLink(edgesCopy)
         .id((d: any) => d.id)
-        .distance(130))
-      .force('charge', d3.forceManyBody().strength(-380))
+        .distance(170))
+      .force('charge', d3.forceManyBody().strength(-600))
       .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide(44))
+      .force('collision', d3.forceCollide(68))
 
     const link = g.append('g').selectAll('line')
       .data(edgesCopy)
@@ -137,19 +138,19 @@ export default function GraphView({ audit, selectedChain, onNodeClick }: Props) 
     feMerge.append('feMergeNode').attr('in', 'SourceGraphic')
 
     node.append('circle')
-      .attr('r', d => d.is_protected ? 24 : 17)
+      .attr('r', d => d.is_protected ? 38 : 30)
       .attr('fill', d => RISK_COLORS[d.risk_level] ?? '#475569')
-      .attr('fill-opacity', d => highlightedNodes.has(d.id) ? 1 : 0.45)
-      .attr('stroke', d => highlightedNodes.has(d.id) ? '#fff' : 'transparent')
-      .attr('stroke-width', 2.5)
+      .attr('fill-opacity', d => highlightedNodes.has(d.id) ? 1 : 0.55)
+      .attr('stroke', d => highlightedNodes.has(d.id) ? '#fff' : 'rgba(255,255,255,0.15)')
+      .attr('stroke-width', d => highlightedNodes.has(d.id) ? 3 : 1.5)
       .attr('filter', d => highlightedNodes.has(d.id) ? 'url(#glow)' : '')
 
     node.append('text')
-      .text(d => d.label.length > 14 ? d.label.slice(0, 12) + '…' : d.label)
+      .text(d => d.label.length > 13 ? d.label.slice(0, 11) + '…' : d.label)
       .attr('text-anchor', 'middle')
       .attr('dy', '0.35em')
-      .attr('font-size', '10px')
-      .attr('font-weight', d => highlightedNodes.has(d.id) ? '700' : '400')
+      .attr('font-size', '11px')
+      .attr('font-weight', d => highlightedNodes.has(d.id) ? '700' : '500')
       .attr('fill', '#f1f5f9')
       .attr('pointer-events', 'none')
 
@@ -169,14 +170,22 @@ export default function GraphView({ audit, selectedChain, onNodeClick }: Props) 
       .text('Drag nodes · Scroll to zoom · Drag canvas to pan · Dbl-click node to unpin')
 
     return () => { simulation.stop() }
-  }, [audit, selectedChain, onNodeClick])
+  }, [audit, selectedChain, onNodeClick, isFullscreen])
 
   return (
     <div
       ref={containerRef}
-      className="w-full rounded-xl bg-slate-900 border border-slate-700 overflow-hidden"
-      style={{ height: '62vh', minHeight: 480 }}
+      className={`relative rounded-xl bg-slate-900 border border-slate-700 overflow-hidden transition-all duration-200 ${
+        isFullscreen ? 'fixed inset-0 z-50 rounded-none border-0' : 'w-full'
+      }`}
+      style={isFullscreen ? {} : { height: '62vh', minHeight: 480 }}
     >
+      <button
+        onClick={() => setIsFullscreen(f => !f)}
+        className="absolute top-3 right-3 z-10 bg-slate-800/90 hover:bg-slate-700 border border-slate-600 text-slate-300 hover:text-white rounded-lg px-3 py-1.5 text-xs font-medium transition-colors backdrop-blur-sm"
+      >
+        {isFullscreen ? '✕ Exit Fullscreen' : '⛶ Fullscreen'}
+      </button>
       <svg ref={svgRef} className="w-full h-full" />
     </div>
   )

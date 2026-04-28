@@ -10,11 +10,9 @@ from app.core.config import settings
 from app.models.schemas import Chain
 
 _explanation_cache: dict[tuple, str] = {}
-_genai_client = None
 
 AICREDITS_ENDPOINT = "https://api.aicredits.in/v1/chat/completions"
-AICREDITS_MODEL = "google/gemini-2.0-flash"
-GEMINI_MODEL = "gemini-2.0-flash-001"
+AICREDITS_MODEL = "gemini-2.0-flash"
 
 
 def _call_aicredits(system: str, user: str) -> str:
@@ -28,9 +26,9 @@ def _call_aicredits(system: str, user: str) -> str:
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
-        "max_tokens": 1024,
+        "max_tokens": 4096,
     }
-    with httpx.Client(timeout=30) as client:
+    with httpx.Client(timeout=60) as client:
         resp = client.post(AICREDITS_ENDPOINT, headers=headers, json=payload)
         resp.raise_for_status()
         data = resp.json()
@@ -45,28 +43,13 @@ def _call_aicredits_with_history(system: str, messages: list) -> str:
     payload = {
         "model": AICREDITS_MODEL,
         "messages": [{"role": "system", "content": system}] + messages,
-        "max_tokens": 1024,
+        "max_tokens": 4096,
     }
-    with httpx.Client(timeout=30) as client:
+    with httpx.Client(timeout=60) as client:
         resp = client.post(AICREDITS_ENDPOINT, headers=headers, json=payload)
         resp.raise_for_status()
         data = resp.json()
         return data["choices"][0]["message"]["content"].strip()
-
-
-def _get_genai_client():
-    global _genai_client
-    if _genai_client is None:
-        from google import genai
-        if settings.gemini_api_key:
-            _genai_client = genai.Client(api_key=settings.gemini_api_key)
-        else:
-            _genai_client = genai.Client(
-                vertexai=True,
-                project=settings.gcp_project_id,
-                location=settings.gcp_region,
-            )
-    return _genai_client
 
 
 # ---------------------------------------------------------------------------
@@ -111,38 +94,12 @@ def explain_chain(chain: Chain) -> str:
         hop_details=hop_details,
     )
 
-    # 1. Try aicredits
-    if settings.aicredits_api_key:
-        try:
-            result = _call_aicredits(CHAIN_EXPLANATION_SYSTEM, user_prompt)
-            _explanation_cache[cache_key] = result
-            return result
-        except Exception:
-            pass
-
-    # 2. Try direct Gemini key
-    if settings.gemini_api_key:
-        try:
-            client = _get_genai_client()
-            response = client.models.generate_content(model=GEMINI_MODEL, contents=user_prompt)
-            result = response.text.strip()
-            _explanation_cache[cache_key] = result
-            return result
-        except Exception:
-            pass
-
-    # 3. Try Vertex AI
-    if settings.gcp_project_id:
-        try:
-            client = _get_genai_client()
-            response = client.models.generate_content(model=GEMINI_MODEL, contents=user_prompt)
-            result = response.text.strip()
-            _explanation_cache[cache_key] = result
-            return result
-        except Exception:
-            pass
-
-    return _fallback_explanation(chain)
+    try:
+        result = _call_aicredits(CHAIN_EXPLANATION_SYSTEM, user_prompt)
+        _explanation_cache[cache_key] = result
+        return result
+    except Exception:
+        return _fallback_explanation(chain)
 
 
 def _fallback_explanation(chain: Chain) -> str:
@@ -191,40 +148,10 @@ def chat(
         messages.append({"role": role, "content": turn["content"]})
     messages.append({"role": "user", "content": user_message})
 
-    # 1. Try aicredits
-    if settings.aicredits_api_key:
-        try:
-            return _call_aicredits_with_history(system_content, messages)
-        except Exception:
-            pass
-
-    # 2. Try direct Gemini key / Vertex AI
-    if settings.gemini_api_key or settings.gcp_project_id:
-        try:
-            from google.genai import types as genai_types
-            client = _get_genai_client()
-
-            contents = []
-            for turn in history:
-                role = "user" if turn["role"] == "user" else "model"
-                contents.append(genai_types.Content(
-                    role=role,
-                    parts=[genai_types.Part(text=turn["content"])]
-                ))
-            contents.append(genai_types.Content(
-                role="user",
-                parts=[genai_types.Part(text=f"{system_content}\n\n---\n{user_message}")]
-            ))
-
-            response = client.models.generate_content(
-                model=GEMINI_MODEL,
-                contents=contents,
-            )
-            return response.text.strip()
-        except Exception:
-            pass
-
-    return _rule_based_chat(user_message, chains)
+    try:
+        return _call_aicredits_with_history(system_content, messages)
+    except Exception:
+        return _rule_based_chat(user_message, chains)
 
 
 def _rule_based_chat(message: str, chains: List[Chain]) -> str:
