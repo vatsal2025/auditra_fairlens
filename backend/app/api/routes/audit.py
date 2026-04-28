@@ -158,15 +158,16 @@ async def run_audit(req: AuditRequest, request: Request):
     proc.start()
     session_store.set(req.session_id, "audit_proc", proc)
 
+    MAX_AUDIT_SECONDS = 300  # 5-minute hard timeout
+    deadline = asyncio.get_event_loop().time() + MAX_AUDIT_SECONDS
+
     try:
         while proc.is_alive():
             await asyncio.sleep(0.5)
             if await request.is_disconnected():
-                proc.terminate()
-                proc.join(timeout=3)
-                if proc.is_alive():
-                    proc.kill()
                 raise HTTPException(status_code=499, detail="Client disconnected — audit cancelled.")
+            if asyncio.get_event_loop().time() > deadline:
+                raise HTTPException(status_code=504, detail="Audit timed out after 5 minutes.")
 
         if result_queue.empty():
             raise HTTPException(status_code=500, detail="Audit process exited without result.")
@@ -180,6 +181,12 @@ async def run_audit(req: AuditRequest, request: Request):
         strengths = payload["strengths"]
 
     finally:
+        # Always kill process on any exit path — disconnect, timeout, error, or success
+        if proc.is_alive():
+            proc.terminate()
+            proc.join(timeout=3)
+            if proc.is_alive():
+                proc.kill()
         session_store.set(req.session_id, "audit_proc", None)
         result_queue.close()
 
