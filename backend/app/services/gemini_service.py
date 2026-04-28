@@ -74,7 +74,7 @@ def explain_chain(chain: Chain) -> str:
     )
 
     try:
-        model = _vertex_model("gemini-2.0-flash-001")
+        model = _vertex_model("gemini-1.5-flash-002")
         response = model.generate_content(prompt)
         result = response.text.strip()
         _explanation_cache[cache_key] = result
@@ -130,7 +130,7 @@ def chat(
     full_prompt = f"{system_content}\n\n---\nUser: {user_message}"
 
     try:
-        model = _vertex_model("gemini-2.0-flash-001")
+        model = _vertex_model("gemini-1.5-flash-002")
         vertex_history = [
             Content(role=turn["role"], parts=[Part.from_text(turn["content"])])
             for turn in history
