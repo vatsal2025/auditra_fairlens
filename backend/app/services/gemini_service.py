@@ -1,32 +1,73 @@
 """
-Gemini via google-genai SDK (new unified SDK, replaces deprecated vertexai.generative_models).
-Uses Vertex AI backend — GCP credits, ADC auth, no separate API key needed.
+Gemini via aicredits.in (cheap OpenAI-compatible proxy) → AI Studio key → Vertex AI fallback.
 """
+import json
 from typing import List, Optional
+
+import httpx
 
 from app.core.config import settings
 from app.models.schemas import Chain
 
 _explanation_cache: dict[tuple, str] = {}
-_client = None
+_genai_client = None
+
+AICREDITS_ENDPOINT = "https://api.aicredits.in/v1/chat/completions"
+AICREDITS_MODEL = "google/gemini-2.0-flash"
+GEMINI_MODEL = "gemini-2.0-flash-001"
 
 
-def _get_client():
-    global _client
-    if _client is None:
+def _call_aicredits(system: str, user: str) -> str:
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {settings.aicredits_api_key}",
+    }
+    payload = {
+        "model": AICREDITS_MODEL,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "max_tokens": 1024,
+    }
+    with httpx.Client(timeout=30) as client:
+        resp = client.post(AICREDITS_ENDPOINT, headers=headers, json=payload)
+        resp.raise_for_status()
+        data = resp.json()
+        return data["choices"][0]["message"]["content"].strip()
+
+
+def _call_aicredits_with_history(system: str, messages: list) -> str:
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {settings.aicredits_api_key}",
+    }
+    payload = {
+        "model": AICREDITS_MODEL,
+        "messages": [{"role": "system", "content": system}] + messages,
+        "max_tokens": 1024,
+    }
+    with httpx.Client(timeout=30) as client:
+        resp = client.post(AICREDITS_ENDPOINT, headers=headers, json=payload)
+        resp.raise_for_status()
+        data = resp.json()
+        return data["choices"][0]["message"]["content"].strip()
+
+
+def _get_genai_client():
+    global _genai_client
+    if _genai_client is None:
         from google import genai
         if settings.gemini_api_key:
-            _client = genai.Client(api_key=settings.gemini_api_key)
+            _genai_client = genai.Client(api_key=settings.gemini_api_key)
         else:
-            _client = genai.Client(
+            _genai_client = genai.Client(
                 vertexai=True,
                 project=settings.gcp_project_id,
                 location=settings.gcp_region,
             )
-    return _client
+    return _genai_client
 
-
-GEMINI_MODEL = "gemini-2.0-flash-001"
 
 # ---------------------------------------------------------------------------
 # Chain explanation
@@ -50,34 +91,58 @@ Write a 3-4 sentence plain English explanation that:
 
 Do NOT use bullet points. Write in paragraph form."""
 
+CHAIN_EXPLANATION_SYSTEM = "You are a fairness auditor. Explain ML discrimination risks clearly to non-technical stakeholders."
+
 
 def explain_chain(chain: Chain) -> str:
     cache_key = (tuple(chain.path), chain.protected_attribute)
     if cache_key in _explanation_cache:
         return _explanation_cache[cache_key]
 
-    if not settings.gcp_project_id:
-        return _fallback_explanation(chain)
-
     hop_details = "\n".join(
         f"  {h.source} → {h.target} (predictive strength: {h.weight:.2%})"
         for h in chain.hops
     )
-    prompt = CHAIN_EXPLANATION_PROMPT.format(
+    user_prompt = CHAIN_EXPLANATION_PROMPT.format(
         path=" → ".join(chain.path),
         protected=chain.protected_attribute,
         risk_score=f"{chain.risk_score:.0%}",
         risk_label=chain.risk_label,
         hop_details=hop_details,
     )
-    try:
-        client = _get_client()
-        response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
-        result = response.text.strip()
-        _explanation_cache[cache_key] = result
-        return result
-    except Exception:
-        return _fallback_explanation(chain)
+
+    # 1. Try aicredits
+    if settings.aicredits_api_key:
+        try:
+            result = _call_aicredits(CHAIN_EXPLANATION_SYSTEM, user_prompt)
+            _explanation_cache[cache_key] = result
+            return result
+        except Exception:
+            pass
+
+    # 2. Try direct Gemini key
+    if settings.gemini_api_key:
+        try:
+            client = _get_genai_client()
+            response = client.models.generate_content(model=GEMINI_MODEL, contents=user_prompt)
+            result = response.text.strip()
+            _explanation_cache[cache_key] = result
+            return result
+        except Exception:
+            pass
+
+    # 3. Try Vertex AI
+    if settings.gcp_project_id:
+        try:
+            client = _get_genai_client()
+            response = client.models.generate_content(model=GEMINI_MODEL, contents=user_prompt)
+            result = response.text.strip()
+            _explanation_cache[cache_key] = result
+            return result
+        except Exception:
+            pass
+
+    return _fallback_explanation(chain)
 
 
 def _fallback_explanation(chain: Chain) -> str:
@@ -116,37 +181,50 @@ def chat(
     history: List[dict],
     dataset_name: Optional[str] = None,
 ) -> str:
-    if not settings.gcp_project_id:
-        return _rule_based_chat(user_message, chains)
-
     audit_context = _build_audit_context(chains, dataset_name)
     system_content = SYSTEM_PROMPT.format(audit_context=audit_context)
 
-    try:
-        from google.genai import types as genai_types
-        client = _get_client()
+    # Build OpenAI-style message list from history
+    messages = []
+    for turn in history:
+        role = "user" if turn["role"] == "user" else "assistant"
+        messages.append({"role": role, "content": turn["content"]})
+    messages.append({"role": "user", "content": user_message})
 
-        # Build conversation history + new message
-        contents = []
-        for turn in history:
-            role = "user" if turn["role"] == "user" else "model"
+    # 1. Try aicredits
+    if settings.aicredits_api_key:
+        try:
+            return _call_aicredits_with_history(system_content, messages)
+        except Exception:
+            pass
+
+    # 2. Try direct Gemini key / Vertex AI
+    if settings.gemini_api_key or settings.gcp_project_id:
+        try:
+            from google.genai import types as genai_types
+            client = _get_genai_client()
+
+            contents = []
+            for turn in history:
+                role = "user" if turn["role"] == "user" else "model"
+                contents.append(genai_types.Content(
+                    role=role,
+                    parts=[genai_types.Part(text=turn["content"])]
+                ))
             contents.append(genai_types.Content(
-                role=role,
-                parts=[genai_types.Part(text=turn["content"])]
+                role="user",
+                parts=[genai_types.Part(text=f"{system_content}\n\n---\n{user_message}")]
             ))
-        # Prepend system context to user message
-        contents.append(genai_types.Content(
-            role="user",
-            parts=[genai_types.Part(text=f"{system_content}\n\n---\n{user_message}")]
-        ))
 
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=contents,
-        )
-        return response.text.strip()
-    except Exception:
-        return _rule_based_chat(user_message, chains)
+            response = client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=contents,
+            )
+            return response.text.strip()
+        except Exception:
+            pass
+
+    return _rule_based_chat(user_message, chains)
 
 
 def _rule_based_chat(message: str, chains: List[Chain]) -> str:

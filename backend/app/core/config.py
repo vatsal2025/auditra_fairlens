@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     # Get free key at: aistudio.google.com/app/apikey
     gemini_api_key: Optional[str] = None
 
+    # aicredits.in proxy key — routes to cheap Gemini via OpenAI-compatible API
+    aicredits_api_key: Optional[str] = None
+
     # Vertex AI chain-scorer endpoints (predict protected attr) — deploy_vertex.py
     vertex_ai_endpoint_compas:      Optional[str] = None
     vertex_ai_endpoint_adult_train: Optional[str] = None
