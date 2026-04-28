@@ -69,7 +69,7 @@ export default function GraphView({ audit, selectedChain, onNodeClick }: Props) 
       .attr('orient', 'auto')
       .append('path')
       .attr('d', 'M0,-5L10,0L0,5')
-      .attr('fill', d => d === 'highlighted' ? '#ef4444' : '#334155')
+      .attr('fill', d => d === 'highlighted' ? '#ef4444' : '#e2e8f0')
 
     const nodesCopy: SimNode[] = audit.nodes.map(n => ({ ...n }))
     const edgesCopy = audit.edges.map(e => ({ ...e }))
@@ -87,13 +87,17 @@ export default function GraphView({ audit, selectedChain, onNodeClick }: Props) 
       .join('line')
       .attr('stroke', d => {
         const key = `${(d.source as any).id ?? d.source}__${(d.target as any).id ?? d.target}`
-        return highlightedEdges.has(key) ? '#ef4444' : '#334155'
+        return highlightedEdges.has(key) ? '#ef4444' : '#e2e8f0'
       })
       .attr('stroke-width', d => {
         const key = `${(d.source as any).id ?? d.source}__${(d.target as any).id ?? d.target}`
         return highlightedEdges.has(key) ? 2.5 : 1.2
       })
-      .attr('stroke-opacity', 0.9)
+      .attr('stroke-opacity', d => {
+        const key = `${(d.source as any).id ?? d.source}__${(d.target as any).id ?? d.target}`
+        return highlightedEdges.has(key) ? 1 : 0.55
+      })
+      .attr('filter', 'url(#glow-line)')
       .attr('marker-end', d => {
         const key = `${(d.source as any).id ?? d.source}__${(d.target as any).id ?? d.target}`
         return `url(#arrow-${highlightedEdges.has(key) ? 'highlighted' : 'default'})`
@@ -131,6 +135,11 @@ export default function GraphView({ audit, selectedChain, onNodeClick }: Props) 
 
     // Glow filter for highlighted nodes
     const defs = g.select('defs')
+    const lineFilter = defs.append('filter').attr('id', 'glow-line')
+    lineFilter.append('feGaussianBlur').attr('stdDeviation', 2).attr('result', 'blur')
+    const lMerge = lineFilter.append('feMerge')
+    lMerge.append('feMergeNode').attr('in', 'blur')
+    lMerge.append('feMergeNode').attr('in', 'SourceGraphic')
     const filter = defs.append('filter').attr('id', 'glow')
     filter.append('feGaussianBlur').attr('stdDeviation', 3.5).attr('result', 'blur')
     const feMerge = filter.append('feMerge')
