@@ -1,4 +1,4 @@
-"""
+﻿"""
 Deploy remaining 2 outcome-scorer endpoints (adult-test + german).
 COMPAS and adult-train already deployed by deploy_outcome_models.py.
 
@@ -12,7 +12,7 @@ import os
 
 PROJECT_ID = "project-6bf0badc-9510-4a48-9e6"
 REGION     = "us-central1"
-MACHINE    = "n1-standard-2"   # 2 vCPU — half quota usage vs n1-standard-4
+MACHINE    = "n1-standard-2"   # 2 vCPU - half quota usage vs n1-standard-4
 ENV_FILE   = os.path.join(os.path.dirname(__file__), ".env")
 
 # IDs already deployed successfully by deploy_outcome_models.py
@@ -98,8 +98,8 @@ def main():
     aiplatform.init(project=PROJECT_ID, location=REGION)
 
     print("=" * 60)
-    print("Auditra — Deploy Remaining 2 Outcome Endpoints")
-    print(f"Machine : {MACHINE} (2 vCPU — quota-safe)")
+    print("Auditra - Deploy Remaining 2 Outcome Endpoints")
+    print(f"Machine : {MACHINE} (2 vCPU - quota-safe)")
     print("=" * 60)
 
     # Write already-deployed IDs first

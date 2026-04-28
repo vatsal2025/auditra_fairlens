@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+﻿from pydantic import BaseModel
 from typing import Dict, List, Optional, Any
 
 
@@ -66,8 +66,8 @@ class GraphEdge(BaseModel):
 class GroupMetrics(BaseModel):
     group_value: str
     size: int
-    base_rate: float          # P(Y=1 | group) — TRUE label rate in data
-    prediction_rate: float = 0.0  # P(Ŷ=1 | group) — model prediction rate
+    base_rate: float          # P(Y=1 | group) - TRUE label rate in data
+    prediction_rate: float = 0.0  # P(Ŷ=1 | group) - model prediction rate
     tpr: float                # True positive rate (sensitivity)
     fpr: float                # False positive rate
     precision: float          # Positive predictive value

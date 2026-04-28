@@ -1,4 +1,4 @@
-"""
+﻿"""
 Conjunctive proxy detection (Zliobaite 2015 Type 2).
 
 A conjunctive proxy occurs when features A and B individually have low predictive
@@ -108,7 +108,7 @@ def find_conjunctive_proxies(
         for feat in non_protected:
             individual_skills[feat] = _skill_score(df, [feat], protected, cv=3)
 
-        # Step 2: candidate pairs — at least one feature with skill > threshold
+        # Step 2: candidate pairs - at least one feature with skill > threshold
         candidates = [f for f, s in individual_skills.items() if s >= min_individual_skill]
         # Also add features with moderate skill for conjunctive detection
         moderate = [f for f, s in individual_skills.items()

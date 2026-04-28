@@ -1,5 +1,5 @@
-"""
-Intersectional fairness scanner — Kearns et al. (2018).
+﻿"""
+Intersectional fairness scanner - Kearns et al. (2018).
 
 Detects "fairness gerrymandering": a model can appear fair on each
 protected attribute individually while being deeply unfair on subgroups

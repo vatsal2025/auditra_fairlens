@@ -1,5 +1,5 @@
-"""
-Standard fairness metrics — computed from Vertex AI outcome predictions (primary)
+﻿"""
+Standard fairness metrics - computed from Vertex AI outcome predictions (primary)
 or LightGBM trained on non-protected features (fallback).
 
 Metrics implemented (Friedler et al. 2019 / Verma & Rubin 2018 taxonomy):
@@ -11,7 +11,7 @@ Metrics implemented (Friedler et al. 2019 / Verma & Rubin 2018 taxonomy):
   - Group-level accuracy, TPR, FPR, precision
 
 Primary path: Vertex AI AutoML outcome-scorer endpoint (full cloud inference).
-Fallback: LightGBM 5-fold CV trained locally — used when Vertex AI endpoint not configured.
+Fallback: LightGBM 5-fold CV trained locally - used when Vertex AI endpoint not configured.
 """
 from __future__ import annotations
 
@@ -67,8 +67,8 @@ def _group_metrics(
             tpr=0.0, fpr=0.0, precision=0.0, accuracy=0.0,
         )
 
-    base_rate = float(yt.mean())            # P(Y=1 | group) — data property
-    prediction_rate = float(yp.mean())      # P(Ŷ=1 | group) — model property
+    base_rate = float(yt.mean())            # P(Y=1 | group) - data property
+    prediction_rate = float(yp.mean())      # P(Ŷ=1 | group) - model property
     accuracy = float((yt == yp).mean())
 
     pos_mask = yt == 1
@@ -98,7 +98,7 @@ def _cross_val_predict_weighted(
     sample_weight: np.ndarray,
     cv: StratifiedKFold,
 ) -> np.ndarray:
-    """CV predict with per-fold sample weights — correctly slices weights per fold."""
+    """CV predict with per-fold sample weights - correctly slices weights per fold."""
     y_proba = np.zeros(len(y), dtype=float)
     for train_idx, test_idx in cv.split(X, y):
         m = clone(model)
@@ -215,7 +215,7 @@ def compute_fairness_metrics(
     if not feature_cols:
         return None
 
-    # Vertex AI primary path — skip if sample_weight given (reweighing uses LightGBM)
+    # Vertex AI primary path - skip if sample_weight given (reweighing uses LightGBM)
     if sample_weight is None:
         vertex_result = _compute_via_vertex_ai(
             df, protected_attr, outcome_col, privileged_value, positive_outcome
@@ -282,7 +282,7 @@ def compute_fairness_metrics(
         ) / total_unpriv
 
     # SPD and DIR use model PREDICTION rates (P(Ŷ=1|group)), not true label rates.
-    # This measures actual model-level discrimination — changes with reweighing.
+    # This measures actual model-level discrimination - changes with reweighing.
     unpriv_pred_rate = _wavg("prediction_rate")
     unpriv_tpr = _wavg("tpr")
     unpriv_fpr = _wavg("fpr")

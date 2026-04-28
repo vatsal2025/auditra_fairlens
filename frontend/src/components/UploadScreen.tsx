@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import axios from 'axios'
 import {
@@ -159,12 +159,12 @@ export default function UploadScreen({ onUploadComplete, onAuditComplete, upload
     dataReadyRef.current = null
     setDemoLoading(true)
     setError(null)
-    // Fire API call (instant ~100ms) — creates backend session so chat works
+    // Fire API call (instant ~100ms) - creates backend session so chat works
     try {
       const res = await axios.post<{ upload: UploadResponse; audit: AuditResponse }>('/api/demo/adult')
       dataReadyRef.current = res.data
     } catch {
-      // Backend unavailable — fall back to pure frontend fixture (no chat)
+      // Backend unavailable - fall back to pure frontend fixture (no chat)
       dataReadyRef.current = { upload: DEMO_UPLOAD, audit: DEMO_AUDIT }
     }
     if (animDoneRef.current) revealDemo(dataReadyRef.current!)

@@ -1,8 +1,8 @@
-# Auditra — Architectural Flow
+﻿# Auditra - Architectural Flow
 
 ## Overview
 
-Auditra is a fairness auditing system for tabular ML datasets. A user uploads a CSV, selects protected attributes, and the system detects multi-hop proxy discrimination chains, computes standard fairness metrics, audits calibration, and returns a PDF report — all powered by Vertex AI.
+Auditra is a fairness auditing system for tabular ML datasets. A user uploads a CSV, selects protected attributes, and the system detects multi-hop proxy discrimination chains, computes standard fairness metrics, audits calibration, and returns a PDF report - all powered by Vertex AI.
 
 The system is a monolith deployed as a single FastAPI process that serves both the REST API and the compiled React frontend as static files.
 
@@ -10,7 +10,7 @@ The system is a monolith deployed as a single FastAPI process that serves both t
 
 ## Request Lifecycle
 
-### 1. Upload Phase — `POST /api/upload`
+### 1. Upload Phase - `POST /api/upload`
 
 ```
 Client → FastAPI → session_store (in-memory dict)
@@ -26,7 +26,7 @@ Client → FastAPI → session_store (in-memory dict)
 - DataFrame stored in `session_store` keyed by a UUID `session_id`
 - Returns: column list with types, row count, session_id
 
-### 2. Audit Phase — `POST /api/audit`
+### 2. Audit Phase - `POST /api/audit`
 
 This is the core computation pipeline. Runs synchronously (FastAPI async thread pool).
 
@@ -56,7 +56,7 @@ AuditRequest
   └─ [9] Intersectional Audit ─ pairwise protected attr SPD scan (Kearns 2018)
 ```
 
-**Step 1 — Graph Engine** (`graph_engine.py`)
+**Step 1 - Graph Engine** (`graph_engine.py`)
 
 Builds a directed feature correlation graph:
 - Pairwise strengths computed using the appropriate measure per column pair type:
@@ -67,7 +67,7 @@ Builds a directed feature correlation graph:
 - Edges added only when strength ≥ `threshold` (default 0.15) and p-value significant
 - Protected attributes are **sink nodes**: no outgoing edges ever leave them
 
-**Step 2 — Chain Finder** (`graph_engine.py`)
+**Step 2 - Chain Finder** (`graph_engine.py`)
 
 Depth-first search for paths terminating at each protected attribute:
 - DFS starts from every non-protected feature node
@@ -78,7 +78,7 @@ Depth-first search for paths terminating at each protected attribute:
 - Initial risk score = geometric mean of hop weights along the path
 - Identical paths deduplicated; highest-scoring copy kept
 
-**Step 3 — Chain Scorer** (`chain_scorer.py` + `vertex_ai_service.py`)
+**Step 3 - Chain Scorer** (`chain_scorer.py` + `vertex_ai_service.py`)
 
 Replaces geometric mean risk with a model-derived skill score:
 - Sends chain-path features to the Vertex AI AutoML chain-scorer endpoint
@@ -88,15 +88,15 @@ Replaces geometric mean risk with a model-derived skill score:
 - Skill = 1 → chain perfectly reconstructs the protected attribute
 - Falls back to LightGBM 5-fold CV on the same data if endpoint unavailable
 
-**Step 4 — Gemini Explanations** (`gemini_service.py`)
+**Step 4 - Gemini Explanations** (`gemini_service.py`)
 
 - Top 5 chains sent to Vertex AI Gemini 1.5 Flash 8B
 - Prompt instructs Gemini to name the historical/social reason, cite regulations
-- Cached in `_explanation_cache` (keyed on path + protected attr) — repeat calls free
+- Cached in `_explanation_cache` (keyed on path + protected attr) - repeat calls free
 - Chains 6–20 get a deterministic fallback explanation (no API call)
 - Chain 21+ not explained
 
-**Step 5 — Fairness Metrics** (`fairness_metrics.py` + `vertex_ai_service.py`)
+**Step 5 - Fairness Metrics** (`fairness_metrics.py` + `vertex_ai_service.py`)
 
 When `outcome_column` provided in request:
 - Sends stratified sample (500 rows) to Vertex AI AutoML outcome-scorer endpoint
@@ -107,14 +107,14 @@ When `outcome_column` provided in request:
 - Aggregate metrics: SPD, DI ratio, EOD, AOD, PPD (all unprivileged vs privileged)
 - Falls back to LightGBM 5-fold CV on full dataset if Vertex AI endpoint not configured
 
-**Step 6 — Reweighing** (`reweighing.py`)
+**Step 6 - Reweighing** (`reweighing.py`)
 
 - Kamiran & Calders (2012) formula: W_i = P(S) × P(Y) / P_obs(S, Y)
 - Produces sample weights making outcome rates identical across demographic groups
 - LightGBM retrained with these weights → mitigated fairness metrics computed
 - Discrimination score after reweighing converges to 0 by construction
 
-**Step 7 — Conjunctive Proxies** (`interaction_scanner.py`)
+**Step 7 - Conjunctive Proxies** (`interaction_scanner.py`)
 
 Detects Type 2 proxy discrimination (Zliobaite 2015):
 - Computes individual skill score for every non-protected feature
@@ -123,7 +123,7 @@ Detects Type 2 proxy discrimination (Zliobaite 2015):
 - Interaction gain = joint_skill − max(skill_A, skill_B)
 - Pairs with gain ≥ 0.05 flagged as conjunctive proxies
 
-**Step 8 — Calibration Audit** (`calibration.py`)
+**Step 8 - Calibration Audit** (`calibration.py`)
 
 - LightGBM trained with 5-fold CV to get probability outputs
 - Expected Calibration Error (ECE) computed per demographic group using 10-bin equal-width bins
@@ -131,7 +131,7 @@ Detects Type 2 proxy discrimination (Zliobaite 2015):
 - Gap < 0.05 → pass (Chouldechova threshold)
 - High gap means the model is reliably confident for some groups but not others
 
-**Step 9 — Intersectional Audit** (`intersectional.py`)
+**Step 9 - Intersectional Audit** (`intersectional.py`)
 
 - Enumerates all combinations of protected attribute values (e.g. race=Black × sex=Female)
 - Base rate P(Y=1) computed per intersection subgroup
@@ -143,7 +143,7 @@ Detects Type 2 proxy discrimination (Zliobaite 2015):
 
 All outputs written to an `AuditResponse` and stored in `session_store` alongside the raw graph objects, for use by subsequent fix/report calls.
 
-### 3. Fix Phase — `POST /api/fix`
+### 3. Fix Phase - `POST /api/fix`
 
 ```
 FixRequest (session_id, chain_id, fix_strategy)
@@ -156,10 +156,10 @@ FixRequest (session_id, chain_id, fix_strategy)
                             recomputes fairness metrics with new weights
 ```
 
-- Fix operates on a copy of the session DataFrame — original preserved
+- Fix operates on a copy of the session DataFrame - original preserved
 - Returns `MetricDelta` list (before/after per metric) and SHAP feature importances
 
-### 4. Chat Phase — `POST /api/chat`
+### 4. Chat Phase - `POST /api/chat`
 
 ```
 ChatRequest (session_id, message)
@@ -170,7 +170,7 @@ ChatRequest (session_id, message)
        Returns plain-text reply
 ```
 
-### 5. Report Phase — `POST /api/report`
+### 5. Report Phase - `POST /api/report`
 
 ```
 ReportRequest (session_id)
@@ -214,7 +214,7 @@ In production, FastAPI serves the compiled React bundle directly:
 - `/assets/*` → `StaticFiles` serving `frontend/dist/assets/`
 - All other paths → `frontend/dist/index.html` (React SPA catch-all)
 
-### Audit Request — Optional Fairness Fields
+### Audit Request - Optional Fairness Fields
 
 The `/api/audit` request accepts an optional `outcome_column` field. When provided, the full fairness metrics pipeline (Steps 5–9) runs. When omitted, only chain detection + scoring runs (Steps 1–4).
 
@@ -223,7 +223,7 @@ The `/api/audit` request accepts an optional `outcome_column` field. When provid
   "session_id": "...",
   "protected_attributes": ["sex", "race"],
   "max_depth": 4,
-  "outcome_column": "income",      // optional — enables SPD/DI/EOD/AOD
+  "outcome_column": "income",      // optional - enables SPD/DI/EOD/AOD
   "privileged_groups": null,        // auto-inferred if null
   "positive_outcome": null          // auto-inferred (minority class)
 }
@@ -246,13 +246,13 @@ The frontend exposes an "Outcome column" dropdown after CSV upload. Selecting a 
 | `AICREDITS_API_KEY` | Yes | gemini-2.0-flash via aicredits.in proxy |
 | `GCP_PROJECT_ID` | Yes | Vertex AI chain/outcome scorer endpoints |
 | `GCP_REGION` | Yes | Vertex AI region (us-central1) |
-| `VERTEX_AI_ENDPOINT_*` | No | AutoML endpoints — LightGBM fallback if unset |
+| `VERTEX_AI_ENDPOINT_*` | No | AutoML endpoints - LightGBM fallback if unset |
 
 ---
 
 ## Vertex AI Communication
 
-All Vertex AI calls use Application Default Credentials (ADC). On the GCP VM the service account attached to the instance handles auth automatically — no JSON key file, no `GOOGLE_APPLICATION_CREDENTIALS` env var needed.
+All Vertex AI calls use Application Default Credentials (ADC). On the GCP VM the service account attached to the instance handles auth automatically - no JSON key file, no `GOOGLE_APPLICATION_CREDENTIALS` env var needed.
 
 ```
 VM (Service Account)
@@ -269,7 +269,7 @@ VM (Service Account)
 
 ```
 GCP VM: auditra-vm (us-central1-a, e2-standard-4)
-  ├─ Port 8000 (TCP) — FastAPI server via systemd (auditra.service)
+  ├─ Port 8000 (TCP) - FastAPI server via systemd (auditra.service)
   ├─ GCP Firewall rule: allow-8000 (0.0.0.0/0)
   │
   └─ Vertex AI (managed, us-central1)

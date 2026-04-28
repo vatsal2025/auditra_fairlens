@@ -1,8 +1,8 @@
-"""
+﻿"""
 Calibration measurement per protected group.
 
-Implements: Expected Calibration Error (ECE) — Guo et al. (2017)
-            Calibration gap between groups — Chouldechova (2017)
+Implements: Expected Calibration Error (ECE) - Guo et al. (2017)
+            Calibration gap between groups - Chouldechova (2017)
 
 Chouldechova (2017) proves that when base rates differ across groups,
 satisfying both FPR parity AND calibration is mathematically impossible.
@@ -87,7 +87,7 @@ def compute_calibration_audit(
 
     Returns CalibrationAudit with ECE per group and cross-group calibration gap.
     A high calibration gap (> 0.05) means the model is better calibrated for
-    some groups than others — a form of predictive unfairness.
+    some groups than others - a form of predictive unfairness.
     """
     if not LGB_AVAILABLE:
         return None

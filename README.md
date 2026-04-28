@@ -1,4 +1,4 @@
-# Auditra — AI Fairness Auditing System
+﻿# Auditra - AI Fairness Auditing System
 
 Multi-hop proxy discrimination chain detector for pre-training datasets. Finds hidden discrimination pathways, computes fairness metrics, and beats every published paper baseline on COMPAS, Adult Income, and German Credit.
 
@@ -9,12 +9,12 @@ Multi-hop proxy discrimination chain detector for pre-training datasets. Finds h
 ## What It Does
 
 Upload any tabular dataset → Auditra detects:
-- **Multi-hop proxy chains** — indirect discrimination paths (e.g. `zip_code → income → race`)
-- **Conjunctive proxies** — discrimination that only appears in feature combinations
-- **Fairness metrics** — SPD, DI ratio, EOD, AOD, FPR disparity
-- **Calibration audit** — equal prediction confidence across demographic groups
-- **Intersectional bias** — discrimination against combined identity subgroups (e.g. Black + Female)
-- **Mitigation** — reweighing + model retraining, with before/after comparison
+- **Multi-hop proxy chains** - indirect discrimination paths (e.g. `zip_code → income → race`)
+- **Conjunctive proxies** - discrimination that only appears in feature combinations
+- **Fairness metrics** - SPD, DI ratio, EOD, AOD, FPR disparity
+- **Calibration audit** - equal prediction confidence across demographic groups
+- **Intersectional bias** - discrimination against combined identity subgroups (e.g. Black + Female)
+- **Mitigation** - reweighing + model retraining, with before/after comparison
 
 ---
 
@@ -69,9 +69,9 @@ React Frontend (Vite + TypeScript + D3 + Tailwind)
 ```
 
 **Vertex AI Integration (3 uses):**
-1. **AutoML chain scoring** — 4 models predict protected attribute from chain features (COMPAS/Adult-train/Adult-test/German). Identifies indirect discrimination paths.
-2. **AutoML fairness metrics** — 4 models predict outcome (recidivism/income/credit risk) from non-protected features. Drives SPD, DI ratio, EOD, AOD computation via cloud inference.
-3. **Gemini via Vertex AI** — AI chat assistant and chain explanations billed against GCP credits, not AI Studio quota.
+1. **AutoML chain scoring** - 4 models predict protected attribute from chain features (COMPAS/Adult-train/Adult-test/German). Identifies indirect discrimination paths.
+2. **AutoML fairness metrics** - 4 models predict outcome (recidivism/income/credit risk) from non-protected features. Drives SPD, DI ratio, EOD, AOD computation via cloud inference.
+3. **Gemini via Vertex AI** - AI chat assistant and chain explanations billed against GCP credits, not AI Studio quota.
 
 ---
 
@@ -111,7 +111,7 @@ Open `http://localhost:5173`
 All AI/ML operations run through Vertex AI. No AI Studio API key needed.
 
 ```env
-# GCP — ADC handles auth automatically on VM
+# GCP - ADC handles auth automatically on VM
 # Local dev: run `gcloud auth application-default login`
 GCP_PROJECT_ID=your-project-id
 GCP_REGION=us-central1
@@ -141,17 +141,17 @@ VERTEX_AI_OUTCOME_GERMAN=
 ### One-time Vertex AI Setup
 
 ```bash
-# Step 1 — Upload datasets + launch chain-scorer training (non-blocking, 1-3 hrs)
+# Step 1 - Upload datasets + launch chain-scorer training (non-blocking, 1-3 hrs)
 python setup_vertex.py
 
-# Step 2 — After chain-scorer jobs show "Succeeded"
+# Step 2 - After chain-scorer jobs show "Succeeded"
 python deploy_vertex.py
 # Auto-writes VERTEX_AI_ENDPOINT_* to .env
 
-# Step 3 — Launch outcome-scorer training (same datasets, different targets)
+# Step 3 - Launch outcome-scorer training (same datasets, different targets)
 python train_outcome_models.py
 
-# Step 4 — After outcome-scorer jobs show "Succeeded"
+# Step 4 - After outcome-scorer jobs show "Succeeded"
 python deploy_outcome_models.py
 # Auto-writes VERTEX_AI_OUTCOME_* to .env
 ```
@@ -210,19 +210,19 @@ python -m pytest tests/ -v --tb=short
 ```
 
 112 tests total:
-- `test_engine.py` — graph engine + chain detection (7 tests)
-- `test_benchmarks.py` — unit metric correctness (43 tests)
-- `test_new_services.py` — calibration, intersectional, reweighing (30 tests)
-- `test_real_datasets.py` — real datasets vs paper baselines (32 tests)
+- `test_engine.py` - graph engine + chain detection (7 tests)
+- `test_benchmarks.py` - unit metric correctness (43 tests)
+- `test_new_services.py` - calibration, intersectional, reweighing (30 tests)
+- `test_real_datasets.py` - real datasets vs paper baselines (32 tests)
 
 ---
 
 ## Papers Referenced
 
-1. Angwin et al. — *Machine Bias* (ProPublica, 2016)
-2. Kamiran & Calders — *Data preprocessing techniques for classification without discrimination* (2012)
-3. Feldman et al. — *Certifying and removing disparate impact* (KDD, 2015)
-4. Friedler et al. — *A comparative study of fairness-enhancing interventions* (FAT*, 2019)
-5. Chouldechova — *Fair prediction with disparate impact* (2017)
-6. Kearns et al. — *Preventing fairness gerrymandering* (ICML, 2018)
-7. Zliobaite — *A survey on measuring indirect discrimination in machine learning* (2015)
+1. Angwin et al. - *Machine Bias* (ProPublica, 2016)
+2. Kamiran & Calders - *Data preprocessing techniques for classification without discrimination* (2012)
+3. Feldman et al. - *Certifying and removing disparate impact* (KDD, 2015)
+4. Friedler et al. - *A comparative study of fairness-enhancing interventions* (FAT*, 2019)
+5. Chouldechova - *Fair prediction with disparate impact* (2017)
+6. Kearns et al. - *Preventing fairness gerrymandering* (ICML, 2018)
+7. Zliobaite - *A survey on measuring indirect discrimination in machine learning* (2015)

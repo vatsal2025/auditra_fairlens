@@ -1,5 +1,5 @@
-"""
-Vertex AI deployment step — run after setup_vertex.py training completes.
+﻿"""
+Vertex AI deployment step - run after setup_vertex.py training completes.
 
   python deploy_vertex.py
 
@@ -92,7 +92,7 @@ def write_env(ids: dict):
 
 def main():
     print("=" * 60)
-    print("Auditra — Vertex AI Deploy (4 models)")
+    print("Auditra - Vertex AI Deploy (4 models)")
     print(f"Project : {PROJECT_ID}")
     print(f"Region  : {REGION}")
     print("=" * 60)

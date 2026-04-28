@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 import multiprocessing
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, Request
@@ -162,7 +162,7 @@ async def run_audit(req: AuditRequest, request: Request):
         while proc.is_alive():
             await asyncio.sleep(0.5)
             if await request.is_disconnected():
-                raise HTTPException(status_code=499, detail="Client disconnected — audit cancelled.")
+                raise HTTPException(status_code=499, detail="Client disconnected - audit cancelled.")
 
         if result_queue.empty():
             raise HTTPException(status_code=500, detail="Audit process exited without result.")
@@ -176,7 +176,7 @@ async def run_audit(req: AuditRequest, request: Request):
         strengths = payload["strengths"]
 
     finally:
-        # Always kill process on any exit path — disconnect, timeout, error, or success
+        # Always kill process on any exit path - disconnect, timeout, error, or success
         if proc.is_alive():
             proc.terminate()
             proc.join(timeout=3)

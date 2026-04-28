@@ -1,6 +1,6 @@
-"""
+﻿"""
 Pre-loaded demo modes: Adult Income (primary) + COMPAS (secondary).
-Adult Income is the primary demo — shows HIGH-risk chains (occupation → sex)
+Adult Income is the primary demo - shows HIGH-risk chains (occupation → sex)
 matching the Amazon hiring AI story. COMPAS demo kept for reference.
 """
 import io
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # ---------------------------------------------------------------------------
-# Adult demo warm cache — persisted to disk so restarts are instant (<1s)
+# Adult demo warm cache - persisted to disk so restarts are instant (<1s)
 # ---------------------------------------------------------------------------
 _DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data")
 _CACHE_FILE = os.path.join(_DATA_DIR, "adult_demo_cache.pkl")
@@ -67,11 +67,11 @@ async def warm_adult_cache() -> None:
         return
 
     try:
-        logger.info("Building Adult Income demo cache (first run — one time only)…")
+        logger.info("Building Adult Income demo cache (first run - one time only)…")
         from app.services.data_loader import load_adult
         df = load_adult()
         if df is None:
-            logger.warning("Adult Income dataset unavailable — demo cache skipped.")
+            logger.warning("Adult Income dataset unavailable - demo cache skipped.")
             return
         if len(df) > 8000:
             df = df.sample(n=8000, random_state=42).reset_index(drop=True)
@@ -203,7 +203,7 @@ async def load_compas_demo():
 
 
 # ---------------------------------------------------------------------------
-# Adult Income demo — HARDCODED fixture, always instant (<100ms)
+# Adult Income demo - HARDCODED fixture, always instant (<100ms)
 # Numbers match our benchmark results exactly (BENCHMARK_REPORT.md)
 # ---------------------------------------------------------------------------
 
@@ -257,7 +257,7 @@ def _build_adult_fixture(session_id: str):
                     ChainHop(source="marital_status",target="relationship",weight=0.58),
                     ChainHop(source="relationship",target="sex",weight=0.71)],
               risk_score=0.5122, risk_label="HIGH", protected_attribute="sex", weakest_link="occupation",
-              explanation="occupation → marital_status → relationship forms a 3-hop relay reconstructing sex with 51.2% skill above random baseline — the exact pattern behind Amazon's 2018 hiring AI scandal. Removing 'occupation' breaks the chain."),
+              explanation="occupation → marital_status → relationship forms a 3-hop relay reconstructing sex with 51.2% skill above random baseline - the exact pattern behind Amazon's 2018 hiring AI scandal. Removing 'occupation' breaks the chain."),
         Chain(id="c002", path=["education","marital_status","relationship","sex"],
               hops=[ChainHop(source="education",target="marital_status",weight=0.29),
                     ChainHop(source="marital_status",target="relationship",weight=0.58),
@@ -361,8 +361,8 @@ def _build_adult_fixture(session_id: str):
         mitigated_fairness_metrics=[mit_sex_fm, mit_race_fm],
         summary=(
             "Found 10 relay chains across 2 protected attributes. 3 HIGH risk. "
-            "Top chain: occupation → marital_status → relationship → sex (skill 0.51 — 51% above random baseline). "
-            "SPD(sex)=−0.199, DI=0.364 — violates 80% rule (EU AI Act Art.10). "
+            "Top chain: occupation → marital_status → relationship → sex (skill 0.51 - 51% above random baseline). "
+            "SPD(sex)=−0.199, DI=0.364 - violates 80% rule (EU AI Act Art.10). "
             "Reweighing reduces |disc| from 0.199→0.109. Matches Amazon 2018 hiring AI pattern."
         ),
     )
@@ -381,14 +381,14 @@ _ADULT_COL_META = {
 
 @router.post("/demo/adult")
 async def load_adult_demo():
-    """Instant fixture — hardcoded, no ML computation. Session stored so chat/fix work."""
+    """Instant fixture - hardcoded, no ML computation. Session stored so chat/fix work."""
     import asyncio
     from app.services.data_loader import load_adult
 
     session_id = str(uuid.uuid4())
     audit_result = _build_adult_fixture(session_id)
 
-    # Load df in thread pool — non-blocking, CSV already on disk so ~0.5s
+    # Load df in thread pool - non-blocking, CSV already on disk so ~0.5s
     loop = asyncio.get_event_loop()
     df = await loop.run_in_executor(None, load_adult)
     if df is not None and len(df) > 8000:

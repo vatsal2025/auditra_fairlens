@@ -1,7 +1,7 @@
-"""
-Vertex AI integration — chain risk scoring + Explainable AI SHAP.
+﻿"""
+Vertex AI integration - chain risk scoring + Explainable AI SHAP.
 
-Auth: Application Default Credentials (ADC) — automatic on GCP VMs.
+Auth: Application Default Credentials (ADC) - automatic on GCP VMs.
 
 4 AutoML endpoints, one per dataset:
   - auditra-chain-scorer-compas       → predicts `race`
@@ -10,7 +10,7 @@ Auth: Application Default Credentials (ADC) — automatic on GCP VMs.
   - auditra-chain-scorer-german       → predicts `sex`
 
 Each model trained on all dataset features. AutoML tabular endpoints require
-ALL training columns in prediction requests — missing columns → 400 error.
+ALL training columns in prediction requests - missing columns → 400 error.
 Non-chain / non-feature columns are sent as empty string "".
 """
 from collections import Counter
@@ -38,7 +38,7 @@ def _detect_dataset(df: pd.DataFrame) -> str:
         return "compas"
     if "checking_account" in cols or "credit_history" in cols or "credit_amount" in cols:
         return "german"
-    # Adult train vs test: both have same columns — default to adult_train endpoint
+    # Adult train vs test: both have same columns - default to adult_train endpoint
     if "workclass" in cols or "marital_status" in cols or "occupation" in cols:
         return "adult_train"
     return "unknown"
@@ -110,7 +110,7 @@ def score_chain_vertex(df: pd.DataFrame, chain: Chain) -> Optional[float]:
     if not available:
         return None
 
-    # All dataset cols except target — AutoML requires full schema with no nulls
+    # All dataset cols except target - AutoML requires full schema with no nulls
     all_input_cols = [c for c in df.columns if c != target_col]
 
     subset = df[all_input_cols + [target_col]].dropna(subset=[target_col]).head(200)
@@ -169,7 +169,7 @@ def score_chain_vertex(df: pd.DataFrame, chain: Chain) -> Optional[float]:
         err = str(e)
         if "Missing struct property" in err or "missing" in err.lower() and "struct" in err.lower():
             _schema_failed_endpoints.add(endpoint_id)
-            print(f"[Vertex AI] Schema mismatch — circuit breaker tripped for {endpoint_id}. "
+            print(f"[Vertex AI] Schema mismatch - circuit breaker tripped for {endpoint_id}. "
                   f"Uploaded dataset missing columns required by training schema. "
                   f"All further chain-scorer calls will use LightGBM.")
         else:
@@ -296,7 +296,7 @@ def predict_outcome_vertex(
     if not available or outcome_col not in df.columns:
         return None
 
-    # All cols except outcome — AutoML outcome-scorer was trained with ALL input cols
+    # All cols except outcome - AutoML outcome-scorer was trained with ALL input cols
     all_input_cols = [c for c in df.columns if c != outcome_col]
 
     subset = df[all_input_cols + [outcome_col]].dropna(subset=[outcome_col])
@@ -322,7 +322,7 @@ def predict_outcome_vertex(
         from google.cloud import aiplatform
 
         endpoint  = aiplatform.Endpoint(endpoint_id)
-        # Outcome-scorer trained on ALL input columns — send real values for all
+        # Outcome-scorer trained on ALL input columns - send real values for all
         instances = [
             {col: str(row[col]) for col in all_input_cols}
             for _, row in subset.iterrows()

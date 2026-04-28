@@ -1,4 +1,4 @@
-"""
+﻿"""
 Feature correlation graph + multi-hop discrimination chain detector.
 
 Key design principles:
@@ -192,7 +192,7 @@ def _pairwise_strength(
 
 
 # ---------------------------------------------------------------------------
-# Graph construction — protected attributes are SINK nodes
+# Graph construction - protected attributes are SINK nodes
 # ---------------------------------------------------------------------------
 
 def build_graph(
@@ -232,7 +232,7 @@ def build_graph(
 
 
 # ---------------------------------------------------------------------------
-# Chain detection (DFS) — protected attrs as terminal-only nodes
+# Chain detection (DFS) - protected attrs as terminal-only nodes
 # ---------------------------------------------------------------------------
 
 def _dfs_chains(

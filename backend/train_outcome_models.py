@@ -1,7 +1,7 @@
-"""
+﻿"""
 Launch 4 AutoML outcome-prediction training jobs using existing Vertex AI datasets.
 These models predict the OUTCOME column (recidivism / income / credit risk)
-from all features — used for fairness metric computation via Vertex AI.
+from all features - used for fairness metric computation via Vertex AI.
 
 Run on VM after the chain-scorer models are deployed:
   source venv/bin/activate
@@ -87,7 +87,7 @@ def main():
     aiplatform.init(project=PROJECT_ID, location=REGION)
 
     print("=" * 60)
-    print("Auditra — Launch 4 Outcome-Prediction AutoML Jobs")
+    print("Auditra - Launch 4 Outcome-Prediction AutoML Jobs")
     print(f"Project : {PROJECT_ID}")
     print(f"Budget  : {BUDGET} milli-node-hours per job")
     print("=" * 60)

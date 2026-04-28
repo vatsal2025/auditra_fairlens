@@ -1,12 +1,12 @@
-"""
+﻿"""
 Real-dataset benchmark suite.
 
 Downloads actual paper datasets and computes the same metrics reported in:
-  [1] Angwin et al. (ProPublica 2016) — COMPAS
-  [2] Kamiran & Calders (2012) — Adult Income
-  [3] Feldman et al. (2015) — Adult Income DI
-  [4] Friedler et al. (2019) — COMPAS, Adult, German (9 interventions)
-  [5] Zliobaite (2015) — proxy discrimination taxonomy
+  [1] Angwin et al. (ProPublica 2016) - COMPAS
+  [2] Kamiran & Calders (2012) - Adult Income
+  [3] Feldman et al. (2015) - Adult Income DI
+  [4] Friedler et al. (2019) - COMPAS, Adult, German (9 interventions)
+  [5] Zliobaite (2015) - proxy discrimination taxonomy
 
 Vertex AI Integration:
   - Chain scoring:    Vertex AI AutoML chain-scorer endpoints (predict protected attr)
@@ -120,7 +120,7 @@ def _feldman_di(df: pd.DataFrame, protected: str, outcome: str,
 
 
 # ===========================================================================
-# COMPAS — ProPublica (2016)
+# COMPAS - ProPublica (2016)
 # ===========================================================================
 
 @pytest.fixture(scope="module")
@@ -275,11 +275,11 @@ class TestCOMPASProPublica:
                   f"A={p.skill_a:.3f}, B={p.skill_b:.3f}, "
                   f"gain={p.interaction_gain:+.3f}  [{p.risk_label}]")
         # At least some interaction should exist in COMPAS
-        print(f"  (Result valid whether 0 or many — documents the measurement)")
+        print(f"  (Result valid whether 0 or many - documents the measurement)")
 
 
 # ===========================================================================
-# Adult Income — Kamiran & Calders (2012), Feldman et al. (2015)
+# Adult Income - Kamiran & Calders (2012), Feldman et al. (2015)
 # ===========================================================================
 
 @pytest.fixture(scope="module")
@@ -322,7 +322,7 @@ class TestAdultIncomeKamiranFeldman:
         print(f"  Delta: {disc - paper_disc:+.4f}  ({abs(disc-paper_disc)/paper_disc*100:.1f}%)")
         print(f"  Note: Paper uses model predictions; we use raw data rates. Raw is always >= model.")
 
-        # Should be in same ballpark — raw data disc often slightly higher than model-based
+        # Should be in same ballpark - raw data disc often slightly higher than model-based
         assert 0.15 <= disc <= 0.25, f"Adult sex disc score={disc:.4f}, expected 0.15-0.25"
 
     def test_feldman_di_ratio_sex(self, adult_df):
@@ -373,7 +373,7 @@ class TestAdultIncomeKamiranFeldman:
         assert len(sex_chains) > 0, "No sex proxy chains detected in Adult Income"
 
     def test_auditra_fairness_metrics_adult_sex(self, adult_df):
-        """Standard fairness metrics on Adult Income — sex protected attribute."""
+        """Standard fairness metrics on Adult Income - sex protected attribute."""
         m = compute_fairness_metrics(
             adult_df, "sex", "income", "Male", ">50K"
         )
@@ -413,7 +413,7 @@ class TestAdultIncomeKamiranFeldman:
 
 
 # ===========================================================================
-# German Credit — Friedler et al. (2019)
+# German Credit - Friedler et al. (2019)
 # ===========================================================================
 
 @pytest.fixture(scope="module")
@@ -458,7 +458,7 @@ class TestGermanCreditFriedler:
         print(f"\n=== German Credit Discrimination Score (sex) ===")
         print(f"  Our raw disc (male-female good credit rate): {disc:.4f}")
         print(f"  Friedler et al. (2019) approx SPD: -0.09  (our sign: male has higher rate)")
-        print(f"  Note: sign conventions differ — Friedler uses unpriv-priv, ours priv-unpriv")
+        print(f"  Note: sign conventions differ - Friedler uses unpriv-priv, ours priv-unpriv")
 
         # Should show some disparity
         assert abs(disc) > 0.02, f"German sex disc score={disc:.4f} unexpectedly small"
@@ -512,7 +512,7 @@ class TestGermanCreditFriedler:
 
 
 # ===========================================================================
-# Cross-dataset summary — paper comparison table
+# Cross-dataset summary - paper comparison table
 # ===========================================================================
 
 class TestPaperComparisonSummary:
@@ -523,7 +523,7 @@ class TestPaperComparisonSummary:
 
     def test_full_comparison_table(self, compas_df, adult_df, german_df):
         print("\n" + "=" * 90)
-        print("PAPER COMPARISON TABLE — REAL DATASETS, PAPER-IDENTICAL METRICS")
+        print("PAPER COMPARISON TABLE - REAL DATASETS, PAPER-IDENTICAL METRICS")
         print("=" * 90)
 
         # --- ProPublica COMPAS ---
@@ -582,7 +582,7 @@ class TestPaperComparisonSummary:
             match = "YES" if abs(delta) / max(abs(paper), 1e-6) < 0.30 else "~"
             print(f"  {name:<25} {ours:>8.4f} {paper:>8.4f} {delta:>+8.4f} {match:>8}")
 
-        # --- Auditra-specific metrics (no paper baseline — novel contribution) ---
+        # --- Auditra-specific metrics (no paper baseline - novel contribution) ---
         print("\n--- Auditra Novel Contribution (no existing paper baseline) ---")
         col_c = detect_column_types(compas_df)
         G_c, s_c = build_graph(compas_df, col_c, threshold=0.10, protected_attributes=["race","sex"])
@@ -698,7 +698,7 @@ class TestPaperComparisonSummary:
 
 
 # ===========================================================================
-# MITIGATED METRICS — our system beats every paper baseline
+# MITIGATED METRICS - our system beats every paper baseline
 # ===========================================================================
 
 class TestMitigatedMetricsBeatPapers:
@@ -707,10 +707,10 @@ class TestMitigatedMetricsBeatPapers:
     fairness metrics than the paper-reported unmitigated baselines.
 
     Paper baselines (unmitigated):
-      COMPAS  — ProPublica 2016: FPR ratio AA/White = 1.910
-      Adult   — Kamiran 2012:    disc score (sex)   = 0.1965
-      Adult   — Feldman 2015:    DI ratio   (sex)   = 0.360
-      German  — Friedler 2019:   disc score (sex)   = 0.090
+      COMPAS  - ProPublica 2016: FPR ratio AA/White = 1.910
+      Adult   - Kamiran 2012:    disc score (sex)   = 0.1965
+      Adult   - Feldman 2015:    DI ratio   (sex)   = 0.360
+      German  - Friedler 2019:   disc score (sex)   = 0.090
     """
 
     @pytest.fixture(scope="class")
@@ -812,13 +812,13 @@ class TestMitigatedMetricsBeatPapers:
         """
         Chouldechova (2017) impossibility: when base rates differ across groups,
         reducing SPD (via reweighing) can worsen EOD. This is mathematically
-        unavoidable — document it, do not assert equality.
+        unavoidable - document it, do not assert equality.
         """
         raw = compute_fairness_metrics(adult_df, "sex", "income", "Male", ">50K")
         mit = compute_mitigated_fairness_metrics(adult_df, "sex", "income", "Male", ">50K")
         assert raw is not None and mit is not None
         print(f"\n  Adult EOD: raw={raw.equal_opportunity_diff:.4f}  mitigated={mit.equal_opportunity_diff:.4f}")
-        print(f"  (Chouldechova tradeoff: SPD improves, EOD may worsen — mathematically expected)")
+        print(f"  (Chouldechova tradeoff: SPD improves, EOD may worsen - mathematically expected)")
 
     # -----------------------------------------------------------------------
     # German Credit: disc score must beat Friedler 0.090
@@ -867,7 +867,7 @@ class TestMitigatedMetricsBeatPapers:
 
         print("\n")
         print("=" * 90)
-        print("BEATS-PAPER TABLE — MITIGATED AUDITRA vs PAPER BASELINES")
+        print("BEATS-PAPER TABLE - MITIGATED AUDITRA vs PAPER BASELINES")
         print("=" * 90)
         rows = [
             ("COMPAS FPR ratio",    fpr_ratio,                                             1.910,  "<",   "ProPublica 2016"),
@@ -887,7 +887,7 @@ class TestMitigatedMetricsBeatPapers:
 
 
 # ===========================================================================
-# Vertex AI Fairness Scoring — explicit benchmark with backend label
+# Vertex AI Fairness Scoring - explicit benchmark with backend label
 # Skips individual endpoint tests if that endpoint is not yet deployed.
 # ===========================================================================
 
@@ -1087,7 +1087,7 @@ class TestVertexAIFairnessScoring:
         fpr_mit = aa_fpr_mit / max(ca_fpr_mit, 1e-9)
 
         print("\n\n" + "=" * 100)
-        print("VERTEX AI BENCHMARK — FULL METRICS vs PUBLISHED PAPERS")
+        print("VERTEX AI BENCHMARK - FULL METRICS vs PUBLISHED PAPERS")
         print("=" * 100)
         print(f"  {'Dataset/Metric':<32} {'Unmitigated':>12} {'Mitigated':>10} {'Paper':>8} {'Better?':>8}  Backend    Source")
         print(f"  {'-'*95}")
@@ -1152,4 +1152,4 @@ class TestVertexAIFairnessScoring:
             print(f"  {label:<12}: {len(scored):>3} chains  top_skill={top_skill:.4f}  "
                   f"CRITICAL={n_critical}  HIGH={n_high}")
 
-        assert all_better, "Not all mitigated metrics beat paper baselines — check output above"
+        assert all_better, "Not all mitigated metrics beat paper baselines - check output above"

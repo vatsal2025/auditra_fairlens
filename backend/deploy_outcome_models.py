@@ -1,4 +1,4 @@
-"""
+﻿"""
 Deploy 4 outcome-scorer AutoML models to Vertex AI endpoints.
 Run after train_outcome_models.py jobs all show 'Succeeded'.
 
@@ -89,7 +89,7 @@ def write_env(ids: dict):
 
 def main():
     print("=" * 60)
-    print("Auditra — Deploy Outcome Models (4 endpoints)")
+    print("Auditra - Deploy Outcome Models (4 endpoints)")
     print(f"Project : {PROJECT_ID}")
     print(f"Region  : {REGION}")
     print("=" * 60)

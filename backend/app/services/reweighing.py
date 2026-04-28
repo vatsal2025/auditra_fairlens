@@ -1,5 +1,5 @@
-"""
-Reweighing — Kamiran & Calders (2012).
+﻿"""
+Reweighing - Kamiran & Calders (2012).
 
 Computes sample weights W_i such that the reweighted distribution has
 discrimination score D ≈ 0:
@@ -12,7 +12,7 @@ where:
   P_obs(S=s,Y=y) = joint proportion of (group s, outcome y)
 
 This produces a uniform expected outcome rate across all groups while
-preserving the overall outcome marginal — achieving disc → 0 by construction.
+preserving the overall outcome marginal - achieving disc → 0 by construction.
 
 Reference: Kamiran & Calders (2012) "Data preprocessing techniques for
            classification without discrimination"

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Real dataset downloader and preprocessor for benchmark comparisons.
 
 Datasets:
@@ -213,7 +213,7 @@ DATASET_CONFIGS = {
                 "fnr_black": 0.280,
                 "fnr_white": 0.477,
             },
-            # Friedler et al. (2019) Table 1 — LR baseline on COMPAS
+            # Friedler et al. (2019) Table 1 - LR baseline on COMPAS
             "friedler_spd": -0.200,   # approx stat parity diff (Black vs White)
         },
     },
@@ -224,7 +224,7 @@ DATASET_CONFIGS = {
         "positive_outcome": ">50K",
         "privileged": {"sex": "Male", "race": "White"},
         "paper_metrics": {
-            # Kamiran & Calders (2012) Table 2 — NB baseline
+            # Kamiran & Calders (2012) Table 2 - NB baseline
             "sex": {
                 "disc_score": 0.1965,   # P(>50K|Male) - P(>50K|Female)
                 "di_ratio": 0.36,       # Feldman et al. (2015) Table 1
@@ -242,7 +242,7 @@ DATASET_CONFIGS = {
         "positive_outcome": "1",
         "privileged": {"sex": "male"},
         "paper_metrics": {
-            # Friedler et al. (2019) — Logistic Regression baseline
+            # Friedler et al. (2019) - Logistic Regression baseline
             "sex": {
                 "spd_approx": -0.09,    # female vs male stat parity diff
             },

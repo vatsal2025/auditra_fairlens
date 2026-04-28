@@ -1,4 +1,4 @@
-import { AuditResponse, UploadResponse } from '../services/api'
+﻿import { AuditResponse, UploadResponse } from '../services/api'
 
 export const DEMO_UPLOAD: UploadResponse = {
   session_id: 'demo-adult-income',
@@ -25,8 +25,8 @@ export const DEMO_AUDIT: AuditResponse = {
   session_id: 'demo-adult-income',
   summary:
     'Found 10 relay chains across 2 protected attributes. 3 HIGH risk. ' +
-    'Top chain: occupation → marital_status → relationship → sex (skill 0.51 — 51% above random baseline). ' +
-    'SPD(sex)=−0.199, DI=0.364 — violates 80% rule (EU AI Act Art.10). ' +
+    'Top chain: occupation → marital_status → relationship → sex (skill 0.51 - 51% above random baseline). ' +
+    'SPD(sex)=−0.199, DI=0.364 - violates 80% rule (EU AI Act Art.10). ' +
     'Reweighing reduces |disc| from 0.199→0.109. Matches Amazon 2018 hiring AI pattern.',
 
   nodes: [
@@ -78,7 +78,7 @@ export const DEMO_AUDIT: AuditResponse = {
       ],
       weakest_link: 'occupation',
       explanation:
-        'occupation → marital_status → relationship forms a 3-hop relay reconstructing sex with 51.2% skill above random baseline — the exact pattern behind Amazon\'s 2018 hiring AI scandal. Removing \'occupation\' breaks the chain.',
+        'occupation → marital_status → relationship forms a 3-hop relay reconstructing sex with 51.2% skill above random baseline - the exact pattern behind Amazon\'s 2018 hiring AI scandal. Removing \'occupation\' breaks the chain.',
     },
     {
       id: 'c002', protected_attribute: 'sex', risk_score: 0.4234, risk_label: 'HIGH',

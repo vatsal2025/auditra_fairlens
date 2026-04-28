@@ -1,10 +1,10 @@
-"""
+﻿"""
 Tests for calibration, reweighing, and intersectional services.
 
 References:
-  Chouldechova (2017) — ECE and calibration gap
-  Kamiran & Calders (2012) — reweighing achieves disc -> 0
-  Kearns et al. (2018) — intersectional fairness gerrymandering
+  Chouldechova (2017) - ECE and calibration gap
+  Kamiran & Calders (2012) - reweighing achieves disc -> 0
+  Kearns et al. (2018) - intersectional fairness gerrymandering
 """
 import pytest
 import numpy as np
@@ -41,7 +41,7 @@ def _make_intersectional_df(n_per_group=300, seed=0):
         ("White", "Male",   0.45),
         ("White", "Female", 0.38),
         ("Black", "Male",   0.32),
-        ("Black", "Female", 0.08),   # worst subgroup — should be flagged
+        ("Black", "Female", 0.08),   # worst subgroup - should be flagged
     ]
     rows = []
     for race, sex, rate in groups:
@@ -161,7 +161,7 @@ class TestCalibrationAudit:
 
 
 # ===========================================================================
-# REWEIGHING — Kamiran & Calders (2012)
+# REWEIGHING - Kamiran & Calders (2012)
 # ===========================================================================
 
 class TestReweighing:
@@ -257,12 +257,12 @@ class TestReweighing:
 
 
 # ===========================================================================
-# INTERSECTIONAL AUDIT — Kearns (2018)
+# INTERSECTIONAL AUDIT - Kearns (2018)
 # ===========================================================================
 
 class TestIntersectionalAudit:
     def test_detects_gerrymandering(self):
-        """Black+Female subgroup significantly disadvantaged — should be flagged."""
+        """Black+Female subgroup significantly disadvantaged - should be flagged."""
         from app.services.intersectional import compute_intersectional_audit
         df = _make_intersectional_df()
         audit = compute_intersectional_audit(df, ["race", "sex"], "income", "1")
@@ -355,7 +355,7 @@ class TestIntersectionalAudit:
 
 
 # ===========================================================================
-# REAL DATASET INTEGRATION — calibration on COMPAS and Adult
+# REAL DATASET INTEGRATION - calibration on COMPAS and Adult
 # ===========================================================================
 
 class TestCalibrationOnRealDatasets:
@@ -408,7 +408,7 @@ class TestCalibrationOnRealDatasets:
 
 
 # ===========================================================================
-# REWEIGHING ON REAL ADULT DATASET — replication of Kamiran Table 2
+# REWEIGHING ON REAL ADULT DATASET - replication of Kamiran Table 2
 # ===========================================================================
 
 class TestReweighingOnRealAdult:

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Free CPU quota by undeploying adult-test chain-scorer (code routes adult_test → adult_train),
 then deploy german outcome-scorer.
 
@@ -29,7 +29,7 @@ if os.path.exists(ENV_FILE):
             break
 
 if not adult_test_endpoint_id:
-    print("VERTEX_AI_ENDPOINT_ADULT_TEST not in .env — skipping undeploy")
+    print("VERTEX_AI_ENDPOINT_ADULT_TEST not in .env - skipping undeploy")
 else:
     try:
         ep = aiplatform.Endpoint(endpoint_name=adult_test_endpoint_id)
@@ -38,7 +38,7 @@ else:
             for dm in deployed:
                 print(f"  Undeploying model {dm.id} from endpoint {adult_test_endpoint_id}...")
                 ep.undeploy(deployed_model_id=dm.id)
-                print(f"  Done — quota freed")
+                print(f"  Done - quota freed")
         else:
             print(f"  Endpoint {adult_test_endpoint_id} has no deployed models (already free)")
     except Exception as e:
@@ -60,9 +60,9 @@ for eid in EMPTY_IDS:
             ep.delete(force=True)
             print(f"  Deleted empty endpoint {eid}")
         else:
-            print(f"  Endpoint {eid} has models — skipping delete")
+            print(f"  Endpoint {eid} has models - skipping delete")
     except Exception as e:
-        print(f"  {eid}: {e} (may not exist — OK)")
+        print(f"  {eid}: {e} (may not exist - OK)")
 
 # ── Step 3: Deploy german outcome-scorer ────────────────────────────────────
 print("\nStep 3: Deploy auditra-outcome-scorer-german")

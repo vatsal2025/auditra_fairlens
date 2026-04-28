@@ -1,4 +1,4 @@
-# Auditra — Technology Stack
+﻿# Auditra - Technology Stack
 
 ## Backend
 
@@ -7,9 +7,9 @@
 |---|---|---|
 | Python | 3.11 | Runtime |
 | FastAPI | 0.11x | REST API framework, async request handling |
-| Uvicorn | — | ASGI server |
-| Pydantic v2 | — | Request/response schema validation, settings |
-| pydantic-settings | — | `.env` file → `Settings` class auto-mapping |
+| Uvicorn | - | ASGI server |
+| Pydantic v2 | - | Request/response schema validation, settings |
+| pydantic-settings | - | `.env` file → `Settings` class auto-mapping |
 
 FastAPI chosen for: automatic OpenAPI docs at `/docs`, Pydantic integration, async support, and static file serving (serves compiled React bundle in production).
 
@@ -28,9 +28,9 @@ FastAPI chosen for: automatic OpenAPI docs at `/docs`, Pydantic integration, asy
 | scikit-learn DummyClassifier | Majority-class baseline for skill score computation |
 
 LightGBM used throughout as the local fallback for three distinct tasks:
-1. **Chain scoring** — predicts protected attribute from chain features (Vertex AI primary)
-2. **Fairness metrics** — predicts outcome from non-protected features (Vertex AI primary)
-3. **Calibration audit** — predicts outcome to get probability outputs for ECE computation
+1. **Chain scoring** - predicts protected attribute from chain features (Vertex AI primary)
+2. **Fairness metrics** - predicts outcome from non-protected features (Vertex AI primary)
+3. **Calibration audit** - predicts outcome to get probability outputs for ECE computation
 
 ### Graph Processing
 | Technology | Role |
@@ -45,11 +45,11 @@ The graph is a directed graph where edges point from proxy features toward prote
 | `google-cloud-aiplatform` | AutoML training jobs, endpoint deployment, online prediction |
 | `vertexai` | Gemini generative models (`GenerativeModel`, `Content`, `Part`) |
 | `google-cloud-storage` | Dataset uploads to GCS bucket for AutoML training |
-| Application Default Credentials (ADC) | Auth on GCP VM — no JSON key needed |
+| Application Default Credentials (ADC) | Auth on GCP VM - no JSON key needed |
 
 Two Vertex AI product types used:
-- **AutoML Tabular** — trains classification models on tabular data with no code
-- **Vertex AI Generative AI** — Gemini 1.5 Flash 8B (explanations) + Gemini 2.5 Flash (chat)
+- **AutoML Tabular** - trains classification models on tabular data with no code
+- **Vertex AI Generative AI** - Gemini 1.5 Flash 8B (explanations) + Gemini 2.5 Flash (chat)
 
 ### Report Generation
 | Technology | Role |
@@ -61,8 +61,8 @@ Two Vertex AI product types used:
 |---|---|---|
 | Bias-corrected Cramér's V | Bergsma (2013) | `graph_engine._cramers_v_with_p` |
 | Eta-squared | Cohen (1988) | `graph_engine._eta_squared_with_p` |
-| Bonferroni correction | — | Applied to all pairwise p-values |
-| Baseline-adjusted skill score | — | `(accuracy − baseline) / (1 − baseline)` |
+| Bonferroni correction | - | Applied to all pairwise p-values |
+| Baseline-adjusted skill score | - | `(accuracy − baseline) / (1 − baseline)` |
 | Kamiran & Calders reweighing | 2012 | `reweighing.compute_sample_weights` |
 | Expected Calibration Error | Guo et al. 2017 | `calibration._ece` |
 | Intersectional SPD | Kearns et al. 2018 | `intersectional.compute_intersectional_audit` |
@@ -121,10 +121,10 @@ Production build (`npm run build`) outputs to `frontend/dist/`. FastAPI mounts t
 
 | Dataset | Rows | Source |
 |---|---|---|
-| COMPAS | ~5,278 (filtered) | ProPublica 2016 — `compas-scores-two-years.csv` |
-| Adult Income (train) | ~30,162 | UCI ML Repository — `adult.data` |
-| Adult Income (test) | ~15,060 | UCI ML Repository — `adult.test` |
-| German Credit | 1,000 | UCI ML Repository — `german.data` |
+| COMPAS | ~5,278 (filtered) | ProPublica 2016 - `compas-scores-two-years.csv` |
+| Adult Income (train) | ~30,162 | UCI ML Repository - `adult.data` |
+| Adult Income (test) | ~15,060 | UCI ML Repository - `adult.test` |
+| German Credit | 1,000 | UCI ML Repository - `german.data` |
 
 COMPAS filtering follows Angwin et al. (2016): days_b_screening_arrest ∈ [−30,30], is_recid ≠ −1, c_charge_degree ≠ 'O', score_text ≠ 'N/A', race ∈ {African-American, Caucasian}.
 

@@ -1,14 +1,14 @@
-"""
-Vertex AI one-time setup for Auditra — 4 datasets.
+﻿"""
+Vertex AI one-time setup for Auditra - 4 datasets.
 
-Step 1 — Run on the VM:
+Step 1 - Run on the VM:
   pip install -r requirements.txt
   python setup_vertex.py
 
   Creates GCS bucket, uploads 4 datasets, launches 4 AutoML training jobs.
-  Training runs in background (1-3 hours). Do NOT wait — move on.
+  Training runs in background (1-3 hours). Do NOT wait - move on.
 
-Step 2 — After training completes:
+Step 2 - After training completes:
   python deploy_vertex.py
 """
 import io
@@ -20,7 +20,7 @@ REGION     = "us-central1"
 BUCKET     = "auditra-ml-6bf0badc"
 BUCKET_URI = f"gs://{BUCKET}"
 
-# Minimum budget (1 node-hour) — keeps cost low, trains a valid model
+# Minimum budget (1 node-hour) - keeps cost low, trains a valid model
 BUDGET_MILLI_NODE_HOURS = 1000
 
 
@@ -79,7 +79,7 @@ def launch_automl_training(display_name: str, dataset, target_column: str) -> st
         training_fraction_split=0.8,
         validation_fraction_split=0.1,
         test_fraction_split=0.1,
-        sync=False,   # non-blocking — returns immediately
+        sync=False,   # non-blocking - returns immediately
     )
 
     print(f"[train] Launched: {display_name}  target={target_column}")
@@ -88,7 +88,7 @@ def launch_automl_training(display_name: str, dataset, target_column: str) -> st
         print(f"        Resource: {resource}")
         return resource
     except Exception:
-        # resource_name unavailable immediately after sync=False — job is still running
+        # resource_name unavailable immediately after sync=False - job is still running
         print(f"        Job launched (resource name unavailable until job registers)")
         return display_name
 
@@ -160,7 +160,7 @@ def main():
     sys.path.insert(0, os.path.dirname(__file__))
 
     print("=" * 60)
-    print("Auditra — Vertex AI Setup (4 datasets)")
+    print("Auditra - Vertex AI Setup (4 datasets)")
     print(f"Project : {PROJECT_ID}")
     print(f"Region  : {REGION}")
     print(f"Bucket  : gs://{BUCKET}")

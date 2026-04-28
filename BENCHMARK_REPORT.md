@@ -1,4 +1,4 @@
-# Auditra — Benchmark Report
+﻿# Auditra - Benchmark Report
 ### Fairness Metrics vs Top 5 Published Papers
 
 ---
@@ -15,11 +15,11 @@ This report compares Auditra's fairness audit results against five landmark pape
 
 | # | Paper | Dataset | Key Metric | Baseline Value |
 |---|-------|---------|-----------|---------------|
-| 1 | Angwin et al. — ProPublica (2016) | COMPAS | FPR ratio AA/White | 1.910 |
+| 1 | Angwin et al. - ProPublica (2016) | COMPAS | FPR ratio AA/White | 1.910 |
 | 2 | Kamiran & Calders (2012) | Adult Income | Disc score (sex) | 0.1965 |
 | 3 | Feldman et al. (2015) | Adult Income | DI ratio (sex) | 0.360 |
 | 4 | Friedler et al. (2019) | German Credit | Disc score (sex) | 0.090 |
-| 5 | Chouldechova (2017) | COMPAS / Adult / German | Calibration gap | — |
+| 5 | Chouldechova (2017) | COMPAS / Adult / German | Calibration gap | - |
 
 ---
 
@@ -50,7 +50,7 @@ Auditra's reweighing reduces the FPR ratio from 2.444 → **1.823**, beating Pro
 
 ---
 
-## 2. Kamiran & Calders (2012) — Adult Income
+## 2. Kamiran & Calders (2012) - Adult Income
 
 The original reweighing paper reports a discrimination score of 0.1965 using Naïve Bayes on Adult Income (sex attribute).
 
@@ -67,13 +67,13 @@ The original reweighing paper reports a discrimination score of 0.1965 using Na�
 | Metric | Unmitigated | **Mitigated (Auditra)** | Paper Baseline | Better? |
 |--------|-------------|------------------------|---------------|---------|
 | \|disc\| sex (SPD) | 0.203 | **0.109** | 0.1965 | ✓ YES |
-| Reweighing disc → 0 | — | **0.000000** | ~0.05 (paper) | ✓ YES |
+| Reweighing disc → 0 | - | **0.000000** | ~0.05 (paper) | ✓ YES |
 
-Auditra achieves **100% discrimination elimination** via reweighing — disc score drops from 0.1989 → 0.000000 (6 decimal places). The paper itself reports partial reduction.
+Auditra achieves **100% discrimination elimination** via reweighing - disc score drops from 0.1989 → 0.000000 (6 decimal places). The paper itself reports partial reduction.
 
 ---
 
-## 3. Feldman et al. (2015) — Disparate Impact
+## 3. Feldman et al. (2015) - Disparate Impact
 
 Feldman introduced the 80% rule (DI < 0.80 = disparate impact). Reported DI ratio of 0.360 for sex on Adult Income.
 
@@ -83,7 +83,7 @@ Feldman introduced the 80% rule (DI < 0.80 = disparate impact). Reported DI rati
 |--------|---------|-------|-------|-------|
 | DI ratio (sex) | 0.3635 | 0.360 | +0.0035 | ✓ YES (+1.0%) |
 | DI ratio (race) | 0.6038 | 0.620 | −0.0162 | ✓ YES (−2.6%) |
-| 80% rule violation | YES (0.364 < 0.80) | YES | — | ✓ Confirmed |
+| 80% rule violation | YES (0.364 < 0.80) | YES | - | ✓ Confirmed |
 
 ### Auditra Mitigated vs Paper Baseline
 
@@ -95,7 +95,7 @@ Mitigated DI ratio of **0.527** is 46% closer to the fair value of 1.0 than Feld
 
 ---
 
-## 4. Friedler et al. (2019) — German Credit
+## 4. Friedler et al. (2019) - German Credit
 
 Friedler's comparative study of fairness interventions reports a statistical parity difference of ~0.09 for sex on German Credit.
 
@@ -113,13 +113,13 @@ Note: Auditra's raw data discrimination score (0.0748) already beats the Friedle
 |--------|-------------|------------------------|---------------|---------|
 | \|disc\| sex | 0.074 | **0.043** | 0.090 | ✓ YES |
 | DI ratio (sex) | 0.843 | **0.946** | ~0.850 | ✓ YES |
-| Reweighing disc → 0 | — | **0.000000** | partial | ✓ YES |
+| Reweighing disc → 0 | - | **0.000000** | partial | ✓ YES |
 
 Mitigated disc score of **0.043** is 52% better than Friedler's baseline. DI ratio of 0.946 is near-perfect (1.0 = fully fair).
 
 ---
 
-## 5. Chouldechova (2017) — Calibration Audit
+## 5. Chouldechova (2017) - Calibration Audit
 
 Chouldechova proved the impossibility of simultaneously satisfying FPR parity, FNR parity, and calibration when base rates differ between groups. Auditra implements a full calibration audit per group.
 
@@ -137,7 +137,7 @@ All three datasets are **well-calibrated** (gap < 0.05). This confirms Chouldech
 
 | Dataset | EOD (raw) | EOD (mitigated) | Interpretation |
 |---------|-----------|-----------------|---------------|
-| Adult (sex) | −0.051 | +0.117 | Reweighing improves SPD but worsens EOD — mathematically expected |
+| Adult (sex) | −0.051 | +0.117 | Reweighing improves SPD but worsens EOD - mathematically expected |
 
 ---
 
@@ -203,6 +203,6 @@ Auditra outperforms every published paper baseline on every tested metric:
 - **Kamiran & Calders**: disc score reduced from 0.1965 → 0.109 (44.5% improvement)
 - **Feldman et al.**: DI ratio improved from 0.360 → 0.527 (46.4% improvement)
 - **Friedler et al.**: German disc score reduced from 0.090 → 0.043 (52.2% improvement)
-- **Chouldechova**: Full calibration audit with ECE per group — confirmed calibrated on all datasets
+- **Chouldechova**: Full calibration audit with ECE per group - confirmed calibrated on all datasets
 
-Beyond replicating paper metrics, Auditra adds three capabilities absent from all five papers: multi-hop relay chain detection, conjunctive proxy (Type 2) discrimination scanning, and intersectional subgroup auditing — all powered by Vertex AI AutoML + Gemini on Google Cloud.
+Beyond replicating paper metrics, Auditra adds three capabilities absent from all five papers: multi-hop relay chain detection, conjunctive proxy (Type 2) discrimination scanning, and intersectional subgroup auditing - all powered by Vertex AI AutoML + Gemini on Google Cloud.

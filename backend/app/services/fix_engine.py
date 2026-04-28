@@ -1,4 +1,4 @@
-"""
+﻿"""
 Fix engine: removes weakest link from chain, validates by actually
 retraining with and without the removed feature.
 """
@@ -72,7 +72,7 @@ def _compute_shap_delta(
         # After model: chain features minus the removed one
         after_cols = [c for c in feature_cols if c != removed_feature]
         if len(after_cols) == 0:
-            # Only one feature — after is trivially zero for that feature
+            # Only one feature - after is trivially zero for that feature
             return [ShapEntry(
                 feature=removed_feature,
                 before=round(float(mean_shap_before[feature_cols.index(removed_feature)]), 4),

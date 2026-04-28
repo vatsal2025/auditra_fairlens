@@ -1,4 +1,4 @@
-# Auditra — Core Engine: Chain Logic and Fairness Scoring
+﻿# Auditra - Core Engine: Chain Logic and Fairness Scoring
 
 ## What Problem This Solves
 
@@ -8,7 +8,7 @@ Example: `zip_code → property_value → loan_amount → race`. No single featu
 
 ---
 
-## Stage 1 — Correlation Graph Construction
+## Stage 1 - Correlation Graph Construction
 
 **File:** `backend/app/services/graph_engine.py`
 
@@ -80,13 +80,13 @@ if source_node in protected_set:
     continue  # no outgoing edges from protected attributes
 ```
 
-This is not optional — it's the key semantic constraint that prevents the DFS from treating protected attributes as intermediates in chains. A chain must always flow TOWARD the protected attribute, never through it.
+This is not optional - it's the key semantic constraint that prevents the DFS from treating protected attributes as intermediates in chains. A chain must always flow TOWARD the protected attribute, never through it.
 
 Edges added only when `strength ≥ threshold` (default 0.15) AND statistically significant after Bonferroni correction.
 
 ---
 
-## Stage 2 — Chain Detection (DFS)
+## Stage 2 - Chain Detection (DFS)
 
 **File:** `backend/app/services/graph_engine.py → find_chains, _dfs_chains`
 
@@ -124,7 +124,7 @@ Before Vertex AI rescoring, chains get an initial risk estimate:
 risk_score_initial = (w₁ × w₂ × ... × wₙ)^(1/n)
 ```
 
-Geometric mean of all hop weights. This favors chains where every hop is strong — a chain with one weak link gets penalized. This initial score is overwritten by the Vertex AI skill score in Stage 3.
+Geometric mean of all hop weights. This favors chains where every hop is strong - a chain with one weak link gets penalized. This initial score is overwritten by the Vertex AI skill score in Stage 3.
 
 ### Weakest Link
 
@@ -140,7 +140,7 @@ Multiple DFS paths can produce the same sequence of nodes. After collection, cha
 
 ---
 
-## Stage 3 — Chain Risk Scoring (Vertex AI + LightGBM)
+## Stage 3 - Chain Risk Scoring (Vertex AI + LightGBM)
 
 **Files:** `backend/app/services/chain_scorer.py`, `backend/app/services/vertex_ai_service.py`
 
@@ -163,9 +163,9 @@ where:
 
 - **skill = 0**: chain provides zero information about the protected attribute beyond base rates
 - **skill = 1**: chain perfectly reconstructs the protected attribute
-- **skill < 0**: clamped to 0 (model worse than guessing — not a proxy)
+- **skill < 0**: clamped to 0 (model worse than guessing - not a proxy)
 
-This formula is critical. Without baseline adjustment, chains in datasets with heavily imbalanced protected attributes (e.g., 85% Male in Adult Income) would score high simply by always predicting Male — a false positive. The skill score eliminates this bias.
+This formula is critical. Without baseline adjustment, chains in datasets with heavily imbalanced protected attributes (e.g., 85% Male in Adult Income) would score high simply by always predicting Male - a false positive. The skill score eliminates this bias.
 
 ### Vertex AI Path
 
@@ -183,7 +183,7 @@ accuracy = count(predicted == actual) / n_rows
 return _skill_score(accuracy, actual_labels)
 ```
 
-Only the chain's features are sent. The AutoML model handles missing columns (other dataset features) as null — this is the key design decision. The same 4 trained models score any chain, regardless of which features that chain contains.
+Only the chain's features are sent. The AutoML model handles missing columns (other dataset features) as null - this is the key design decision. The same 4 trained models score any chain, regardless of which features that chain contains.
 
 ### Dataset Detection
 
@@ -216,7 +216,7 @@ skill < 0.25 → LOW
 
 ---
 
-## Stage 4 — AI Explanations (aicredits.in → gemini-2.0-flash)
+## Stage 4 - AI Explanations (aicredits.in → gemini-2.0-flash)
 
 **File:** `backend/app/services/gemini_service.py`
 
@@ -265,7 +265,7 @@ The same aicredits.in proxy handles the chat endpoint (`POST /api/chat`). The fu
 
 ---
 
-## Stage 5 — Conjunctive Proxy Detection
+## Stage 5 - Conjunctive Proxy Detection
 
 **File:** `backend/app/services/interaction_scanner.py`
 
@@ -279,7 +279,7 @@ Example: `age + zip_code` together identify race in redlined neighborhoods, even
 Step 1: Compute individual skill score for every non-protected feature
 
 Step 2: Candidate pool = features with skill ≥ 0.02
-         + features with skill ≥ 0.01 (moderate — can form conjunctive pairs)
+         + features with skill ≥ 0.01 (moderate - can form conjunctive pairs)
 
 Step 3: For each pair (A, B) in candidate pool (max 200 pairs evaluated):
     joint_skill = skill_score([A, B], protected)
@@ -292,13 +292,13 @@ Interaction gain measures how much additional discriminatory power the pair has 
 
 ---
 
-## Stage 6 — Standard Fairness Metrics
+## Stage 6 - Standard Fairness Metrics
 
 **File:** `backend/app/services/fairness_metrics.py`
 
 ### What These Measure
 
-These metrics measure how a trained outcome-prediction model performs differently across demographic groups. They do NOT measure the protected attribute directly — they measure whether the model's errors are distributed equally.
+These metrics measure how a trained outcome-prediction model performs differently across demographic groups. They do NOT measure the protected attribute directly - they measure whether the model's errors are distributed equally.
 
 All computed from a model predicting the **outcome** (recidivism, income >50K, credit risk) using non-protected features.
 
@@ -366,7 +366,7 @@ Full dataset used (no sampling) with 5-fold CV. This is the path used for mitiga
 
 ---
 
-## Stage 7 — Reweighing Mitigation
+## Stage 7 - Reweighing Mitigation
 
 **File:** `backend/app/services/reweighing.py`
 
@@ -381,7 +381,7 @@ where:
   P_obs(S = s, Y = y) = joint proportion of (group s, outcome y) in dataset
 ```
 
-The weights make the expected joint distribution of (S, Y) equal to the product of marginals — independence between group membership and outcome. A model trained with these weights achieves discrimination score → 0 by construction (Kamiran & Calders 2012, Theorem 1).
+The weights make the expected joint distribution of (S, Y) equal to the product of marginals - independence between group membership and outcome. A model trained with these weights achieves discrimination score → 0 by construction (Kamiran & Calders 2012, Theorem 1).
 
 ### Implementation Detail
 
@@ -408,7 +408,7 @@ On all three benchmark datasets, `disc_after` converges to < 0.001.
 
 ---
 
-## Stage 8 — Calibration Audit
+## Stage 8 - Calibration Audit
 
 **File:** `backend/app/services/calibration.py`
 
@@ -442,7 +442,7 @@ where:
 calibration_gap = max(ECE_per_group) − min(ECE_per_group)
 ```
 
-A high calibration gap means the model's probability outputs are trustworthy for some demographic groups but not others — a subtle but important form of unfairness.
+A high calibration gap means the model's probability outputs are trustworthy for some demographic groups but not others - a subtle but important form of unfairness.
 
 Threshold: gap < 0.05 → pass (well-calibrated across groups).
 
@@ -450,13 +450,13 @@ Threshold: gap < 0.05 → pass (well-calibrated across groups).
 
 ---
 
-## Stage 9 — Intersectional Audit
+## Stage 9 - Intersectional Audit
 
 **File:** `backend/app/services/intersectional.py`
 
 ### Fairness Gerrymandering (Kearns et al. 2018)
 
-A model can appear fair on race alone AND fair on sex alone, while being deeply unfair for Black women specifically. This is called fairness gerrymandering — aggregate fairness masks subgroup discrimination.
+A model can appear fair on race alone AND fair on sex alone, while being deeply unfair for Black women specifically. This is called fairness gerrymandering - aggregate fairness masks subgroup discrimination.
 
 ### Method
 
@@ -468,11 +468,11 @@ For each pair (attr_A, attr_B) of protected attributes:
     Flag subgroups where |SPD| > 0.10
 ```
 
-Base rates use the raw outcome labels (not model predictions) — this measures data-level intersectional bias, not model bias. A dataset where Black women have a much lower base rate of positive outcomes than White men has structural intersectional bias regardless of what model is trained.
+Base rates use the raw outcome labels (not model predictions) - this measures data-level intersectional bias, not model bias. A dataset where Black women have a much lower base rate of positive outcomes than White men has structural intersectional bias regardless of what model is trained.
 
 The threshold 0.10 (10 percentage point disparity) comes from Kearns et al. (2018)'s definition of a significant subgroup violation.
 
-When more than 2 protected attributes are present, all pairs are evaluated and the **worst-case pair** (highest max_spd_gap) is returned — this is the most conservative reporting approach.
+When more than 2 protected attributes are present, all pairs are evaluated and the **worst-case pair** (highest max_spd_gap) is returned - this is the most conservative reporting approach.
 
 ---
 

@@ -1,6 +1,6 @@
-"""
+﻿"""
 Launch all 4 AutoML training jobs using already-created Vertex AI datasets.
-Datasets were created by setup_vertex.py — no need to re-upload data.
+Datasets were created by setup_vertex.py - no need to re-upload data.
 
 Run on VM:
   source venv/bin/activate
@@ -88,7 +88,7 @@ def main():
     aiplatform.init(project=PROJECT_ID, location=REGION)
 
     print("=" * 60)
-    print("Auditra — Launch All 4 AutoML Training Jobs")
+    print("Auditra - Launch All 4 AutoML Training Jobs")
     print(f"Project : {PROJECT_ID}")
     print(f"Budget  : {BUDGET} milli-node-hours per job")
     print("=" * 60)

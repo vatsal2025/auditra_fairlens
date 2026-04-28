@@ -1,4 +1,4 @@
-"""
+﻿"""
 Gemini via aicredits.in (cheap OpenAI-compatible proxy) → AI Studio key → Vertex AI fallback.
 """
 import json
@@ -62,7 +62,7 @@ A multi-hop proxy discrimination chain was found in a dataset:
 
 Chain path: {path}
 Protected attribute: {protected}
-Skill score: {risk_score} ({risk_label}) — skill above random-chance baseline
+Skill score: {risk_score} ({risk_label}) - skill above random-chance baseline
 Hop details:
 {hop_details}
 
@@ -123,12 +123,12 @@ SYSTEM_PROMPT = """You are FairLens, an AI fairness auditing assistant. You help
 Audit context:
 {audit_context}
 
-RESPONSE FORMAT RULES — follow strictly:
+RESPONSE FORMAT RULES - follow strictly:
 - Lead with a 2-3 sentence plain-English summary.
 - Then use bullet points (- item) for key findings, actions, or explanations.
 - Use a markdown table when comparing metrics, chains, or groups (| Col | Col |).
 - Never write long prose paragraphs. Max 4 lines of prose total.
-- Be direct and specific — name exact features, exact metrics, exact regulations.
+- Be direct and specific - name exact features, exact metrics, exact regulations.
 - Regulations to cite when relevant: EU AI Act Article 10, US ECOA, GDPR Article 22."""
 
 
@@ -166,7 +166,7 @@ def _rule_based_chat(message: str, chains: List[Chain]) -> str:
                 for c in chains[:5]
             )
             return (
-                f"**Recommended fix:** Remove `{top.weakest_link}` — weakest link in the highest-risk chain.\n\n"
+                f"**Recommended fix:** Remove `{top.weakest_link}` - weakest link in the highest-risk chain.\n\n"
                 f"| Chain | Risk | Weakest Link |\n|---|---|---|\n{rows}"
             )
     if any(w in msg for w in ["chain", "logic", "how", "explain", "what", "work"]):
@@ -183,18 +183,18 @@ def _rule_based_chat(message: str, chains: List[Chain]) -> str:
     if any(w in msg for w in ["complian", "regulat", "law", "eu", "act", "legal", "gdpr", "ecoa"]):
         return (
             "**Compliance implications:**\n"
-            "- **EU AI Act Article 10** — data governance must prevent proxy discrimination\n"
-            "- **GDPR Article 22** — no automated decisions based on protected proxies\n"
-            "- **US ECOA** — adverse action cannot stem from protected-class proxy features\n\n"
-            f"{'HIGH/CRITICAL chains found — immediate remediation required.' if high else 'No HIGH/CRITICAL chains — lower compliance risk.'}"
+            "- **EU AI Act Article 10** - data governance must prevent proxy discrimination\n"
+            "- **GDPR Article 22** - no automated decisions based on protected proxies\n"
+            "- **US ECOA** - adverse action cannot stem from protected-class proxy features\n\n"
+            f"{'HIGH/CRITICAL chains found - immediate remediation required.' if high else 'No HIGH/CRITICAL chains - lower compliance risk.'}"
         )
     if any(w in msg for w in ["fairness", "metric", "spd", "disparate", "impact", "parity", "tpr", "fpr"]):
         return (
             "**Fairness metrics:**\n"
-            "- **SPD** — Statistical Parity Diff: P(ŷ=1|unprivileged) − P(ŷ=1|privileged). Fair: |SPD| < 0.1\n"
-            "- **DI** — Disparate Impact ratio: ≥ 0.8 required (80% rule)\n"
-            "- **EOD** — Equal Opportunity Diff: TPR gap across groups\n"
-            "- **AOD** — Average Odds Diff: mean of TPR + FPR gaps\n\n"
+            "- **SPD** - Statistical Parity Diff: P(ŷ=1|unprivileged) − P(ŷ=1|privileged). Fair: |SPD| < 0.1\n"
+            "- **DI** - Disparate Impact ratio: ≥ 0.8 required (80% rule)\n"
+            "- **EOD** - Equal Opportunity Diff: TPR gap across groups\n"
+            "- **AOD** - Average Odds Diff: mean of TPR + FPR gaps\n\n"
             "See the Fairness Metrics panel for exact values."
         )
     n_high = len(high)

@@ -1,19 +1,19 @@
-"""
+﻿"""
 Benchmark suite for Auditra hopping-chain detection.
 
 Compares against published results from:
   [1] Feldman et al. (2015) "Certifying and Removing Disparate Impact"
-      KDD 2015 — disparate impact in COMPAS and Adult datasets
+      KDD 2015 - disparate impact in COMPAS and Adult datasets
   [2] Angwin et al. (ProPublica, 2016) "Machine Bias"
       COMPAS: Black defendants ~2x more likely mislabeled high-risk
   [3] Kamiran & Calders (2012) "Data preprocessing techniques for
-      classification without discrimination" — Adult Income dataset
+      classification without discrimination" - Adult Income dataset
   [4] Friedler et al. (2019) "A comparative study of fairness-enhancing
-      interventions in machine learning" — COMPAS, Adult, German Credit
+      interventions in machine learning" - COMPAS, Adult, German Credit
   [5] Zliobaite (2015) "A survey on measuring indirect discrimination
-      in machine learning" — proxy discrimination taxonomy
+      in machine learning" - proxy discrimination taxonomy
   [6] Zhang & Neill (2016) "Identifying significant predictive bias
-      in classifiers" — MDSS scan statistic
+      in classifiers" - MDSS scan statistic
 
 All datasets are synthetic or publicly available (no license issues).
 
@@ -78,7 +78,7 @@ def _load_adult() -> pd.DataFrame:
 
 
 def _load_german() -> pd.DataFrame:
-    """German Credit dataset — sex proxy discrimination benchmark."""
+    """German Credit dataset - sex proxy discrimination benchmark."""
     if not os.path.exists(GERMAN_PATH):
         return None
     try:
@@ -411,7 +411,7 @@ class TestFalsePositiveControl:
             print(f"  {' -> '.join(c.path)} | {c.risk_label} | skill={c.risk_score:.3f}")
 
         assert len(critical) == 0, \
-            f"Null dataset produced {len(critical)} CRITICAL/HIGH chains — false positive!"
+            f"Null dataset produced {len(critical)} CRITICAL/HIGH chains - false positive!"
 
     def test_skill_score_near_zero_for_random_features(self):
         """Skill score for truly unrelated features must be near 0."""
@@ -473,7 +473,7 @@ class TestGraphStructure:
         for p in protected:
             out_edges = list(G.successors(p))
             assert out_edges == [], \
-                f"Protected attr '{p}' has outgoing edges: {out_edges} — graph is not causal"
+                f"Protected attr '{p}' has outgoing edges: {out_edges} - graph is not causal"
 
     def test_no_backward_chains_through_protected(self):
         """No chain uses a protected attr as an intermediate node."""
@@ -549,7 +549,7 @@ class TestGraphStructure:
 class TestCOMPASBenchmark:
     """
     ProPublica COMPAS analysis benchmark.
-    Reference: Angwin et al. (2016) — Black defendants 2x more likely mislabeled.
+    Reference: Angwin et al. (2016) - Black defendants 2x more likely mislabeled.
     Expected: auditor should detect race and sex proxy chains with HIGH/CRITICAL risk.
     """
 
@@ -590,7 +590,7 @@ class TestCOMPASBenchmark:
         print(f"\nDisparate Impact (Black vs White, High risk): {di:.3f}")
         print(f"  Feldman et al. threshold: < 0.8 = disparate impact")
         # Dataset is designed to have DI
-        assert di < 0.8 or di > 1.2, f"DI={di:.3f} — dataset should show disparate impact"
+        assert di < 0.8 or di > 1.2, f"DI={di:.3f} - dataset should show disparate impact"
 
     @pytest.mark.skipif(not os.path.exists(COMPAS_PATH), reason="COMPAS CSV not found (download from ProPublica)")
     def test_compas_real_dataset_detection(self):
@@ -607,8 +607,8 @@ class TestCOMPASBenchmark:
         m_race = _audit_metrics(scored, "race")
         m_sex = _audit_metrics(scored, "sex")
 
-        print(f"\nReal COMPAS — race: {m_race}")
-        print(f"Real COMPAS — sex: {m_sex}")
+        print(f"\nReal COMPAS - race: {m_race}")
+        print(f"Real COMPAS - sex: {m_sex}")
 
         assert m_race["total"] > 0, "Real COMPAS must detect race chains"
         assert m_race["top_score"] > 0.05, \
@@ -617,7 +617,7 @@ class TestCOMPASBenchmark:
 
 class TestAdultIncomeBenchmark:
     """
-    UCI Adult Income — Kamiran & Calders (2012), Friedler et al. (2019) benchmark.
+    UCI Adult Income - Kamiran & Calders (2012), Friedler et al. (2019) benchmark.
     Known proxy discrimination: occupation/education proxy for sex and race.
     80% income disparity between men and women is documented.
     """
@@ -634,8 +634,8 @@ class TestAdultIncomeBenchmark:
         m_sex = _audit_metrics(scored, "sex")
         m_race = _audit_metrics(scored, "race")
 
-        print(f"\nAdult-like benchmark — sex: {m_sex}")
-        print(f"Adult-like benchmark — race: {m_race}")
+        print(f"\nAdult-like benchmark - sex: {m_sex}")
+        print(f"Adult-like benchmark - race: {m_race}")
 
         assert m_sex["total"] > 0, "Should detect sex proxy chains"
         sex_paths = [tuple(c.path) for c in scored if c.protected_attribute == "sex"]
@@ -661,13 +661,13 @@ class TestAdultIncomeBenchmark:
         chains = find_chains(G, strengths, protected, max_depth=4, col_types=col_types)
         scored = score_all_chains(df, chains[:30])
         m_sex = _audit_metrics(scored, "sex")
-        print(f"\nReal Adult — sex: {m_sex}")
+        print(f"\nReal Adult - sex: {m_sex}")
         assert m_sex["total"] > 0
 
 
 class TestGermanCreditBenchmark:
     """
-    German Credit dataset — Friedler et al. (2019).
+    German Credit dataset - Friedler et al. (2019).
     Housing type is documented proxy for sex (women more often rent).
     """
 
@@ -681,7 +681,7 @@ class TestGermanCreditBenchmark:
         scored = score_all_chains(df, chains)
 
         m = _audit_metrics(scored, "sex")
-        print(f"\nGerman Credit-like benchmark — sex: {m}")
+        print(f"\nGerman Credit-like benchmark - sex: {m}")
 
         assert m["total"] > 0, "Should detect sex proxy chains"
         paths = [tuple(c.path) for c in scored if c.protected_attribute == "sex"]
@@ -736,7 +736,7 @@ class TestGermanCreditBenchmark:
 
 class TestRedliningBenchmark:
     """
-    Redlining scenario — Feldman et al. (2015) disparate impact.
+    Redlining scenario - Feldman et al. (2015) disparate impact.
     Classic: zip_code -> property_value -> loan_approval proxies race.
     """
 
@@ -811,7 +811,7 @@ class TestIndirectDiscriminationTaxonomy:
         chains = find_chains(G, strengths, ["race"], max_depth=2, col_types=col_types)
         scored = score_all_chains(df, chains)
         assert any(len(c.hops) == 1 for c in scored), "Type 1 single proxy not detected"
-        print(f"\nType 1 proxy — chains: {len(scored)}, top: {scored[0].risk_score:.3f}" if scored else "NONE")
+        print(f"\nType 1 proxy - chains: {len(scored)}, top: {scored[0].risk_score:.3f}" if scored else "NONE")
 
     def test_type3_relay_chain(self):
         """
@@ -890,7 +890,7 @@ class TestPerformance:
         chains = find_chains(G, strengths, ["race"], max_depth=4, col_types=col_types)
         elapsed = time.time() - t0
         print(f"\nDense graph chains: {len(chains)} in {elapsed:.2f}s")
-        assert elapsed < 10, f"DFS took {elapsed:.2f}s on dense graph — O(n!) blowup risk"
+        assert elapsed < 10, f"DFS took {elapsed:.2f}s on dense graph - O(n!) blowup risk"
 
     def test_deduplication_works(self):
         """Same path found from different DFS starts should appear only once."""
@@ -1059,7 +1059,7 @@ class TestEndToEndPipeline:
         scored = score_all_chains(df, chains[:20])
 
         label_order = {"LOW": 0, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
-        # Sorted descending — so label values should be non-increasing
+        # Sorted descending - so label values should be non-increasing
         for i in range(len(scored) - 1):
             a, b = scored[i], scored[i + 1]
             assert label_order[a.risk_label] >= label_order[b.risk_label] or a.risk_score >= b.risk_score, \
