@@ -111,6 +111,9 @@ export const runAudit = (
 ) =>
   api.post<AuditResponse>('/audit', { session_id, protected_attributes, max_depth, threshold, outcome_column: outcome_column || null })
 
+export const cancelAudit = (session_id: string) =>
+  api.post<{ cancelled: boolean }>('/cancel', { session_id })
+
 export const applyFix = (session_id: string, chain_id: string) =>
   api.post<FixResponse>('/fix', { session_id, chain_id })
 

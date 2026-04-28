@@ -4,6 +4,7 @@ import axios from 'axios'
 import {
   AuditResponse,
   ColumnInfo,
+  cancelAudit,
   runAudit,
   UploadResponse,
   uploadDataset,
@@ -135,6 +136,13 @@ export default function UploadScreen({ onUploadComplete, onAuditComplete, upload
     } finally {
       setAuditing(false)
     }
+  }
+
+  const handleCancel = async () => {
+    if (!sessionId) return
+    try { await cancelAudit(sessionId) } catch { /* best effort */ }
+    setAuditing(false)
+    setError('Audit cancelled.')
   }
 
   const animDoneRef = useRef(false)
@@ -330,22 +338,33 @@ export default function UploadScreen({ onUploadComplete, onAuditComplete, upload
             </select>
           </div>
 
-          <button
-            onClick={handleAudit}
-            disabled={selected.size === 0 || auditing}
-            className="w-full py-4 rounded-xl font-bold text-lg transition-all
-              bg-red-500 hover:bg-red-600 hover:shadow-lg hover:shadow-red-900/40
-              disabled:bg-slate-700 disabled:text-slate-500 text-white"
-          >
-            {auditing ? (
-              <span className="flex items-center justify-center gap-3">
-                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Auditing dataset - tracing all paths…
-              </span>
-            ) : selected.size === 0
-              ? 'Select at least one protected attribute'
-              : `Run Audit → ${selected.size} protected attribute${selected.size !== 1 ? 's' : ''}`}
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleAudit}
+              disabled={selected.size === 0 || auditing}
+              className="flex-1 py-4 rounded-xl font-bold text-lg transition-all
+                bg-red-500 hover:bg-red-600 hover:shadow-lg hover:shadow-red-900/40
+                disabled:bg-slate-700 disabled:text-slate-500 text-white"
+            >
+              {auditing ? (
+                <span className="flex items-center justify-center gap-3">
+                  <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Auditing dataset - tracing all paths…
+                </span>
+              ) : selected.size === 0
+                ? 'Select at least one protected attribute'
+                : `Run Audit → ${selected.size} protected attribute${selected.size !== 1 ? 's' : ''}`}
+            </button>
+            {auditing && (
+              <button
+                onClick={handleCancel}
+                className="px-5 py-4 rounded-xl font-bold text-sm transition-all
+                  bg-slate-700 hover:bg-slate-600 border border-slate-500 text-slate-300 hover:text-white"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </div>
       )}
 
