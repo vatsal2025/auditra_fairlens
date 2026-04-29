@@ -2,7 +2,7 @@
 
 Multi-hop proxy discrimination chain detector for pre-training datasets. Finds hidden discrimination pathways, computes fairness metrics, and beats every published paper baseline on COMPAS, Adult Income, and German Credit.
 
-**Live Demo:** `http://34.61.217.242:8000/`
+> ⭐ **Live Demo:** [`http://34.61.217.242:8000/`](http://34.61.217.242:8000/)
 
 ---
 
