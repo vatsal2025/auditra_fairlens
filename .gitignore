@@ -11,3 +11,4 @@ dist/
 .DS_Store
 vertex_jobs.txt
 backend/.env
+Presentation_DECK_CONTEXT.md
