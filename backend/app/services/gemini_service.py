@@ -1,4 +1,4 @@
-﻿"""
+"""
 Gemini via aicredits.in (cheap OpenAI-compatible proxy) → AI Studio key → Vertex AI fallback.
 """
 import json
@@ -123,6 +123,11 @@ SYSTEM_PROMPT = """You are FairLens, an AI fairness auditing assistant. You help
 Audit context:
 {audit_context}
 
+CRITICAL BEHAVIOUR RULE:
+- Answer ONLY what the user explicitly asks. Do NOT proactively summarise chains, list findings, or give an audit overview unless the user's message directly requests it.
+- If the user asks a general greeting or an open-ended question not about chains, respond conversationally and ask what they'd like to explore.
+- Never volunteer chain details, risk scores, or dataset summaries unprompted.
+
 RESPONSE FORMAT RULES - follow strictly:
 - Lead with a 2-3 sentence plain-English summary.
 - Then use bullet points (- item) for key findings, actions, or explanations.
@@ -197,12 +202,15 @@ def _rule_based_chat(message: str, chains: List[Chain]) -> str:
             "- **AOD** - Average Odds Diff: mean of TPR + FPR gaps\n\n"
             "See the Fairness Metrics panel for exact values."
         )
-    n_high = len(high)
+    # No keyword matched — give a neutral open-ended response instead of
+    # auto-dumping an audit summary the user didn't ask for.
     return (
-        f"**Audit summary:** {len(chains)} relay chains, {n_high} HIGH/CRITICAL risk.\n\n"
-        + (f"Top: `{' → '.join(top.path)}` → `{top.protected_attribute}` "
-           f"({top.risk_score:.0%} skill). Cut `{top.weakest_link}` to break it.\n\n" if top else "")
-        + "Ask about: chain logic · compliance · how to fix · fairness metrics"
+        "I'm here to help you explore your audit results. What would you like to know?\n\n"
+        "You can ask about:\n"
+        "- **Chain logic** — how proxy discrimination chains work\n"
+        "- **Compliance** — which regulations apply\n"
+        "- **Fixes** — which feature to remove to break a chain\n"
+        "- **Fairness metrics** — SPD, DI, EOD, AOD explained"
     )
 
 
