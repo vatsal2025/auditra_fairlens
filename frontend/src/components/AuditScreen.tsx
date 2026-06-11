@@ -18,6 +18,7 @@ interface Props {
   uploadData: UploadResponse
   initialAuditData: AuditResponse | null
   onAuditComplete: (data: AuditResponse) => void
+  onReset?: () => void
 }
 
 function CleanDatasetBanner({ summary }: { summary: string }) {
@@ -51,7 +52,7 @@ function CleanDatasetBanner({ summary }: { summary: string }) {
   )
 }
 
-export default function AuditScreen({ uploadData, initialAuditData, onAuditComplete }: Props) {
+export default function AuditScreen({ uploadData, initialAuditData, onAuditComplete, onReset }: Props) {
   const [audit, setAudit] = useState<AuditResponse | null>(initialAuditData)
   const [selectedChain, setSelectedChain] = useState<Chain | null>(null)
   const [lastFix, setLastFix] = useState<FixResponse | null>(null)
@@ -272,7 +273,7 @@ export default function AuditScreen({ uploadData, initialAuditData, onAuditCompl
               </button>
             </div>
 <div className="flex-1 min-h-0 overflow-hidden">
-              <ChatBox sessionId={uploadData.session_id} />
+              <ChatBox sessionId={uploadData.session_id} onSessionExpired={onReset} />
             </div>
           </div>
         </div>

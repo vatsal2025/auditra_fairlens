@@ -69,6 +69,7 @@ export default function App() {
             uploadData={uploadData}
             initialAuditData={auditData}
             onAuditComplete={setAuditData}
+            onReset={reset}
           />
         )}
       </main>

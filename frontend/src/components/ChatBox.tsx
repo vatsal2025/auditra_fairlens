@@ -10,6 +10,7 @@ interface Message {
 
 interface Props {
   sessionId: string
+  onSessionExpired?: () => void
 }
 
 function AssistantMessage({ content }: { content: string }) {
@@ -44,7 +45,7 @@ function AssistantMessage({ content }: { content: string }) {
   )
 }
 
-export default function ChatBox({ sessionId }: Props) {
+export default function ChatBox({ sessionId, onSessionExpired }: Props) {
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: "Hi! I'm your FairLens audit assistant. Ask me anything about the chains found in your dataset, compliance implications, or what to fix first." }
   ])
@@ -65,8 +66,16 @@ export default function ChatBox({ sessionId }: Props) {
     try {
       const res = await sendChat(sessionId, msg)
       setMessages(prev => [...prev, { role: 'assistant', content: res.data.reply }])
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'AI assistant is temporarily unavailable. Please try again.' }])
+    } catch (err: any) {
+      if (err?.response?.status === 404) {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: '**Session expired** — the server was restarted and your session was lost.\n\nClick **← New Upload** at the top to reload the demo and start a fresh session.',
+        }])
+        onSessionExpired?.()
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', content: 'AI assistant is temporarily unavailable. Please try again.' }])
+      }
     } finally {
       setLoading(false)
     }
