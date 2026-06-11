@@ -1,0 +1,13 @@
+frontend/
+.git/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+backend/.pytest_cache/
+backend/tests/
+backend/.env
+backend/launch_remaining_jobs.py
+backend/cleanup_empty_endpoints.py
+backend/deploy_*.py
+auditra.zip
+*.md
