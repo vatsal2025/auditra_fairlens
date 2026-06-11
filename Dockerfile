@@ -2,6 +2,7 @@ FROM python:3.11-slim
 
 # WeasyPrint system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgomp1 \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
     libcairo2 \
